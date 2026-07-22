@@ -12,14 +12,12 @@
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
     body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
     .fc-event-title { font-size: 0.8em; white-space: normal; }
-    /* ซ่อน Scrollbar สำหรับ list-container */
     #list-container::-webkit-scrollbar { width: 6px; }
     #list-container::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
   </style>
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 pb-10">
 
-  <!-- Navbar ด้านบนสุด -->
   <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
@@ -38,7 +36,6 @@
 
   <div class="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
     
-    <!-- สถิติจำนวนงาน (นำมาไว้บนสุด) -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
         <p class="text-slate-500 text-sm font-medium">งานทั้งหมด</p>
@@ -58,28 +55,44 @@
       </div>
     </div>
 
-    <!-- ส่วนเนื้อหาหลัก: ปฏิทิน (ซ้าย) และ รายการงาน (ขวา) -->
+    <!-- ส่วนที่เพิ่มใหม่: ตารางสรุปคิวงาน (Log 1 ปี) -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h3 class="font-bold text-lg text-slate-800">ตารางตรวจสอบคิวงาน (สถิติปีนี้)</h3>
+        <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">*เรียงลำดับจากคนออกงานน้อยสุดไปมากสุด</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-max">
+          <thead>
+            <tr class="bg-slate-50 text-slate-600 text-sm">
+              <th class="p-3 border-b font-medium rounded-tl-lg">ชื่อบุคลากร</th>
+              <th class="p-3 border-b font-medium text-center">รวม (ปีนี้)</th>
+              <th class="p-3 border-b font-medium text-center">งานใน</th>
+              <th class="p-3 border-b font-medium text-center">งานนอก</th>
+              <th class="p-3 border-b font-medium rounded-tr-lg">ไปล่าสุดเมื่อ</th>
+            </tr>
+          </thead>
+          <tbody id="personnel-stats-table">
+            <tr><td colspan="5" class="text-center p-4 text-slate-400">กำลังโหลดข้อมูล...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- ปฏิทิน -->
       <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div id='calendar'></div>
       </div>
-      
-      <!-- รายชื่อใครไปไหน -->
       <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[650px]">
         <h3 class="font-bold text-lg mb-4 text-slate-800 border-b pb-2">รายละเอียดงานเร็วๆ นี้</h3>
         <div id="list-container" class="overflow-y-auto flex-1 space-y-3 pr-2">
           <div class="text-center text-slate-400 mt-10">กำลังโหลดข้อมูล...</div>
         </div>
       </div>
-      
     </div>
   </div>
 
-  <!-- ================= MODALS ================= -->
-
-  <!-- Modal: เพิ่มงาน -->
+  <!-- Modals สำหรับเพิ่มงานและชื่อคนเหมือนเดิม -->
   <div id="taskModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm">
     <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-lg">
       <div class="flex justify-between items-center mb-5 border-b pb-3">
@@ -97,19 +110,16 @@
             <input type="text" id="f_time" placeholder="เช่น 09:00-12:00" class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
-        
         <div>
           <label class="block text-sm text-slate-600 mb-1">ชื่อผู้ปฏิบัติงาน</label>
           <select id="f_name" required class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">-- กำลังโหลดรายชื่อ --</option>
           </select>
         </div>
-
         <div>
           <label class="block text-sm text-slate-600 mb-1">ชื่องาน/ภารกิจ</label>
           <input type="text" id="f_task" required class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm text-slate-600 mb-1">ประเภท</label>
@@ -123,7 +133,6 @@
             <input type="text" id="f_location" class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
-        
         <div class="pt-4 flex justify-end gap-3">
           <button type="button" onclick="closeModal('taskModal')" class="px-5 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">ยกเลิก</button>
           <button type="submit" id="btnSubmitTask" class="px-5 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">บันทึกข้อมูล</button>
@@ -132,7 +141,6 @@
     </div>
   </div>
 
-  <!-- Modal: เพิ่มชื่อคน -->
   <div id="personModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm">
     <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm">
       <div class="flex justify-between items-center mb-4 border-b pb-2">
@@ -142,7 +150,6 @@
       <form id="personForm" onsubmit="submitPersonForm(event)">
         <label class="block text-sm text-slate-600 mb-2">ชื่อ-นามสกุล / ยศ</label>
         <input type="text" id="p_name" required placeholder="เช่น จ.ท. กฤษณะ" class="w-full border rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        
         <div class="flex justify-end gap-2">
           <button type="button" onclick="closeModal('personModal')" class="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">ยกเลิก</button>
           <button type="submit" id="btnSubmitPerson" class="px-4 py-2 text-white bg-slate-800 rounded-lg hover:bg-slate-900">เพิ่มชื่อ</button>
@@ -151,14 +158,14 @@
     </div>
   </div>
 
-  <!-- ================= SCRIPTS ================= -->
   <script>
-    // === นำ URL ของ Apps Script Web App มาใส่ตรงนี้ ===
+    // === อย่าลืมนำ URL ของ Apps Script มาใส่ตรงนี้ ===
     const API_URL = 'https://script.google.com/macros/s/AKfycbxE8VTVv_6sj-PMOMPKVjbqBvNydNQnKkNPjpo-yzt7zjFJHoBrsr8J7Doch4D2MUrh/exec';
     
     let allData = [];
     let personnelList = [];
     let calendar;
+    const currentYear = new Date().getFullYear();
 
     document.addEventListener('DOMContentLoaded', function() {
       initCalendar();
@@ -176,11 +183,9 @@
       calendar.render();
     }
 
-    // เปิด-ปิด Modal
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // ดึงข้อมูลทั้งหมด
     async function fetchData() {
       try {
         const response = await fetch(API_URL);
@@ -192,15 +197,15 @@
         updatePersonnelDropdown();
       } catch (error) {
         console.error("Error fetching:", error);
-        document.getElementById('list-container').innerHTML = `<div class="text-red-500 text-center">ดึงข้อมูลล้มเหลว โปรดตรวจสอบลิงก์ API</div>`;
+        document.getElementById('list-container').innerHTML = `<div class="text-red-500 text-center">ดึงข้อมูลล้มเหลว โปรดตรวจสอบลิงก์ API หรือการ Deploy Web App อีกครั้ง</div>`;
+        document.getElementById('personnel-stats-table').innerHTML = `<tr><td colspan="5" class="text-center p-4 text-red-500">ดึงข้อมูลล้มเหลว</td></tr>`;
       }
     }
 
-    // อัปเดต Dropdown เลือกชื่อคน
     function updatePersonnelDropdown() {
       const select = document.getElementById('f_name');
       if (personnelList.length === 0) {
-        select.innerHTML = '<option value="">-- ยังไม่มีรายชื่อ (โปรดเพิ่มก่อน) --</option>';
+        select.innerHTML = '<option value="">-- โหลดรายชื่อไม่ขึ้น หรือ ยังไม่มีชื่อ --</option>';
         return;
       }
       select.innerHTML = '<option value="">-- เลือกบุคลากร --</option>';
@@ -212,7 +217,6 @@
       });
     }
 
-    // อัปเดตข้อมูลบนหน้าจอ
     function updateDashboard() {
       let total = allData.length;
       let inside = 0;
@@ -221,7 +225,13 @@
       let events = [];
       let listHTML = '';
 
-      // เรียงจากใหม่ไปเก่า
+      // สำหรับสรุป Log รายบุคคล
+      let pStats = {};
+      // กำหนดค่าเริ่มต้นให้ทุกคนในแผนกก่อน เพื่อให้คนที่ยอด 0 โผล่มาในคิวด้วย
+      personnelList.forEach(name => {
+        pStats[name] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
+      });
+
       allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
 
       allData.forEach(item => {
@@ -229,8 +239,25 @@
         if(item.Type === 'งานนอก') outside++;
         if(item.Name) personCount[item.Name] = (personCount[item.Name] || 0) + 1;
 
-        let bgColor = item.Type === 'งานนอก' ? '#f97316' : '#10b981';
+        // คำนวณ Log สถิติ
+        if(item.Date && item.Name) {
+          let itemDateObj = new Date(item.Date);
+          if (itemDateObj.getFullYear() === currentYear) {
+            let pName = item.Name;
+            if(!pStats[pName]) pStats[pName] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
+            
+            pStats[pName].total++;
+            if(item.Type === 'งานใน') pStats[pName].inside++;
+            if(item.Type === 'งานนอก') pStats[pName].outside++;
+            
+            if(itemDateObj.getTime() > pStats[pName].lastDate) {
+              pStats[pName].lastDate = itemDateObj.getTime();
+              pStats[pName].lastDateStr = itemDateObj.toLocaleDateString('th-TH');
+            }
+          }
+        }
 
+        let bgColor = item.Type === 'งานนอก' ? '#f97316' : '#10b981';
         if(item.Date) {
           let isoDate = new Date(item.Date).toISOString().split('T')[0];
           events.push({
@@ -241,7 +268,7 @@
           });
         }
 
-        listHTML += `
+        listHTML = `
           <div class="p-4 bg-slate-50 border-l-4 ${item.Type === 'งานนอก' ? 'border-orange-500' : 'border-emerald-500'} rounded-r-xl shadow-sm mb-3">
             <div class="flex justify-between items-start">
               <p class="font-bold text-slate-800">${item.Name}</p>
@@ -252,11 +279,35 @@
               🗓️ ${new Date(item.Date).toLocaleDateString('th-TH')} ⏰ ${item.Time || '-'}
             </p>
           </div>
-        `;
+        ` + listHTML; // เรียงเอาอันใหม่สุดไว้บนสุดใน Feed ด้านขวา
       });
 
-      let topPerson = Object.keys(personCount).length > 0 ? Object.keys(personCount).reduce((a, b) => personCount[a] > personCount[b] ? a : b) : '-';
+      // จัดการตารางเรียงคิว
+      let sortedStats = Object.keys(pStats).map(name => {
+        return { name: name, ...pStats[name] };
+      }).sort((a, b) => a.total - b.total); // เรียงจากคนไปน้อยสุด
 
+      let tableHTML = '';
+      if(sortedStats.length === 0) {
+        tableHTML = `<tr><td colspan="5" class="text-center p-4 text-slate-400">ยังไม่มีข้อมูลบุคลากร</td></tr>`;
+      } else {
+        sortedStats.forEach(stat => {
+          // คนที่ยังไม่เคยออกงาน จะเป็นไฮไลท์สีอ่อนๆ ไว้บนสุด
+          let rowClass = stat.total === 0 ? 'bg-blue-50/50 font-medium' : 'hover:bg-slate-50';
+          tableHTML += `
+            <tr class="border-b border-slate-100 ${rowClass}">
+              <td class="p-3 text-slate-800">${stat.name}</td>
+              <td class="p-3 text-center font-bold ${stat.total === 0 ? 'text-slate-400' : 'text-blue-600'}">${stat.total}</td>
+              <td class="p-3 text-center text-slate-500">${stat.inside}</td>
+              <td class="p-3 text-center text-slate-500">${stat.outside}</td>
+              <td class="p-3 text-sm text-slate-500">${stat.lastDateStr}</td>
+            </tr>
+          `;
+        });
+      }
+      document.getElementById('personnel-stats-table').innerHTML = tableHTML;
+
+      let topPerson = Object.keys(personCount).length > 0 ? Object.keys(personCount).reduce((a, b) => personCount[a] > personCount[b] ? a : b) : '-';
       document.getElementById('stat-total').innerText = total;
       document.getElementById('stat-inside').innerText = inside;
       document.getElementById('stat-outside').innerText = outside;
@@ -267,7 +318,6 @@
       calendar.addEventSource(events);
     }
 
-    // ฟังก์ชันส่งฟอร์มบันทึกงาน
     async function submitTaskForm(e) {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitTask');
@@ -284,14 +334,12 @@
       };
 
       await postData(payload);
-      
       document.getElementById('taskForm').reset();
       closeModal('taskModal');
-      fetchData(); // โหลดใหม่
+      fetchData(); 
       btn.innerText = 'บันทึกข้อมูล'; btn.disabled = false;
     }
 
-    // ฟังก์ชันส่งฟอร์มเพิ่มชื่อคน
     async function submitPersonForm(e) {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitPerson');
@@ -303,17 +351,14 @@
       };
 
       await postData(payload);
-      
       document.getElementById('personForm').reset();
       closeModal('personModal');
-      fetchData(); // โหลดใหม่
+      fetchData();
       btn.innerText = 'เพิ่มชื่อ'; btn.disabled = false;
     }
 
-    // ฟังก์ชันยิง API กลาง
     async function postData(payload) {
       try {
-        // ใช้ text/plain เลี่ยงปัญหา CORS Preflight
         await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
