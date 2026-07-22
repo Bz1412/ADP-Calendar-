@@ -358,7 +358,7 @@
       renderSortablePersonnel();
     }
 
-        function updateDashboard() {
+      function updateDashboard() {
       let total = 0, inside = 0, outside = 0;
       let events = [], listHTML = '';
       let pStats = {};
@@ -410,10 +410,12 @@
           let isPast = endDateStrBase < todayStr;
           let color = isPast ? '#94a3b8' : getColorForName(item.Name); 
 
+          // บวก 1 วันสำหรับปฏิทินแบบปลอดภัย
           let [ey, em, ed] = endDateStrBase.split('-').map(Number);
           let endObj = new Date(ey, em - 1, ed + 1);
           let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
 
+          // แยกเวลาเริ่มต้น
           let startTime = '';
           if (item.Time && item.Time.includes('-')) {
              startTime = item.Time.split('-')[0].trim();
@@ -421,13 +423,17 @@
              startTime = item.Time.trim();
           }
 
+          // **จุดที่แก้ไข:** บังคับใส่เวลา T00:00:00 เพื่อป้องกัน FullCalendar แปลงโซนเวลาผิดเพี้ยน
+          let calendarStart = startTime ? `${startDateStr}T${startTime}:00` : `${startDateStr}T00:00:00`;
+          let calendarEnd = `${endCalStr}T00:00:00`;
+
           events.push({
             title: `${item.Name} - ${item.Task}`,
-            start: startTime ? `${startDateStr}T${startTime}:00` : startDateStr,
-            end: endCalStr,
+            start: calendarStart,
+            end: calendarEnd,
             backgroundColor: color, 
             borderColor: color,
-            allDay: startTime === '', 
+            allDay: !startTime, 
             extendedProps: { taskData: item }
           });
 
