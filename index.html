@@ -367,7 +367,11 @@
         pStats[name] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
       });
 
-      allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+      allData.sort((a, b) => {
+        let dateA = a.Date ? a.Date.split('T')[0] : '';
+        let dateB = b.Date ? b.Date.split('T')[0] : '';
+        return dateA.localeCompare(dateB);
+      });
       
       // ประกาศตัวแปร todayStr แค่ครั้งเดียวตรงนี้
       let todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
@@ -403,19 +407,14 @@
             latestTaskTime = itemTimeVal;
             lastPeopleAssigned = namesArr; 
           }
-
+          // ตัดสตริงวันที่ให้อยู่ในรูป YYYY-MM-DD เสมอ
           let startDateStr = item.Date.split('T')[0];
           let endDateStrBase = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
           
           let isPast = endDateStrBase < todayStr;
           let color = isPast ? '#94a3b8' : getColorForName(item.Name); 
 
-          // บวก 1 วันสำหรับปฏิทินแบบปลอดภัย
-          let [ey, em, ed] = endDateStrBase.split('-').map(Number);
-          let endObj = new Date(ey, em - 1, ed + 1);
-          let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
-
-          // แยกเวลาเริ่มต้น
+          // แยกเวลาเริ่มต้น (ถ้ามี)
           let startTime = '';
           if (item.Time && item.Time.includes('-')) {
              startTime = item.Time.split('-')[0].trim();
@@ -423,9 +422,15 @@
              startTime = item.Time.trim();
           }
 
-          // **จุดที่แก้ไข:** บังคับใส่เวลา T00:00:00 เพื่อป้องกัน FullCalendar แปลงโซนเวลาผิดเพี้ยน
-          let calendarStart = startTime ? `${startDateStr}T${startTime}:00` : `${startDateStr}T00:00:00`;
-          let calendarEnd = `${endCalStr}T00:00:00`;
+          // **วิธีแก้ที่ถูกต้อง:** เติมเครื่องหมายบอก Timezone (+07:00) เข้าไปท้ายสตริง 
+          // เพื่อให้ JavaScript และ FullCalendar รู้ว่าเป็นเวลาของประเทศไทยเป๊ะๆ ไม่ถูกดึงถอยหลัง
+          let calendarStart = startTime ? `${startDateStr}T${startTime}:00+07:00` : `${startDateStr}T00:00:00+07:00`;
+          
+          // คำนวณวันสิ้นสุด (บวกเพิ่ม 1 วัน สำหรับ All-day event ให้ FullCalendar แสดงผลครอบคลุมช่อง)
+          let [ey, em, ed] = endDateStrBase.split('-').map(Number);
+          let endObj = new Date(ey, em - 1, ed + 1);
+          let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
+          let calendarEnd = `${endCalStr}T00:00:00+07:00`;
 
           events.push({
             title: `${item.Name} - ${item.Task}`,
