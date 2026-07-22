@@ -358,7 +358,7 @@
       renderSortablePersonnel();
     }
 
-    function updateDashboard() {
+        function updateDashboard() {
       let total = 0, inside = 0, outside = 0;
       let events = [], listHTML = '';
       let pStats = {};
@@ -368,10 +368,12 @@
       });
 
       allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
-      let todayStr = new Date().toISOString().split('T')[0];
+      
+      // ประกาศตัวแปร todayStr แค่ครั้งเดียวตรงนี้
+      let todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
       
       let latestTaskTime = 0;
-      let lastPeopleAssigned = []; // เก็บชื่อคนที่ถูก assign ในงานล่าสุด
+      let lastPeopleAssigned = []; 
 
       allData.forEach(item => {
         if(item.Date && item.Name) {
@@ -379,7 +381,6 @@
           let itemTimeVal = itemDateObj.getTime();
           let namesArr = item.Name.split(',').map(n => n.trim());
 
-          // เช็คสถิติเฉพาะปีนี้
           if (itemDateObj.getFullYear() === currentYear) {
             total++;
             if(item.Type === 'งานใน') inside++;
@@ -398,26 +399,21 @@
             });
           }
 
-          // หางานล่าสุดที่ถูกสร้าง/ออกไป (ไม่สนว่าปีไหน เพื่อหาคิวต่อไป)
           if(itemTimeVal >= latestTaskTime) {
             latestTaskTime = itemTimeVal;
-            lastPeopleAssigned = namesArr; // อัปเดตกลุ่มคนที่ไปงานล่าสุด
+            lastPeopleAssigned = namesArr; 
           }
 
-                    // หาวันที่แบบไม่เพี้ยน Timezone (ใช้ค่า Text วันที่มาตรงๆ)
           let startDateStr = item.Date.split('T')[0];
           let endDateStrBase = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
           
-          let todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
           let isPast = endDateStrBase < todayStr;
           let color = isPast ? '#94a3b8' : getColorForName(item.Name); 
 
-          // บวก 1 วันสำหรับปฏิทินแบบปลอดภัย
           let [ey, em, ed] = endDateStrBase.split('-').map(Number);
           let endObj = new Date(ey, em - 1, ed + 1);
           let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
 
-          // แยกเวลาเริ่มต้น
           let startTime = '';
           if (item.Time && item.Time.includes('-')) {
              startTime = item.Time.split('-')[0].trim();
@@ -435,7 +431,6 @@
             extendedProps: { taskData: item }
           });
 
-          // จัดการรูปแบบวันที่แสดงผลในการ์ดด้านข้าง
           let [sy, sm, sd] = startDateStr.split('-').map(Number);
           let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
           let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
@@ -458,16 +453,11 @@
         }
       });
 
-      // ==============================================
-      // ลอจิกหาคิวคนต่อไปแบบสมบูรณ์แบบ
-      // ==============================================
       let nextPerson = '-';
       if (personnelList.length > 0) {
         if (lastPeopleAssigned.length === 0) {
-          // ยังไม่มีใครเคยออกงานเลย เอาคนแรกบนสุด
           nextPerson = personnelList[0];
         } else {
-          // หารายชื่อคนในงานล่าสุด ที่อยู่ลำดับ "ล่างสุด" ของตารางคิว
           let highestIndex = -1;
           lastPeopleAssigned.forEach(pName => {
              let idx = personnelList.indexOf(pName);
@@ -475,20 +465,18 @@
           });
 
           if(highestIndex === -1) {
-            nextPerson = personnelList[0]; // กรณีรายชื่อล่าสุดถูกลบไปแล้ว
+            nextPerson = personnelList[0];
           } else {
-            // เอาคนถัดไป (ถ้า +1 แล้วเกินจำนวนคน ให้ Mod กลับไปที่ 0 คือคนแรก)
             let nextIndex = (highestIndex + 1) % personnelList.length;
             nextPerson = personnelList[nextIndex];
           }
         }
       }
 
-      // สร้างตาราง
       let tableHTML = '';
       personnelList.forEach((name, idx) => {
         let stat = pStats[name] || { total: 0, inside: 0, outside: 0, lastDateStr: '-' };
-        let isNext = (name === nextPerson); // ไฮไลท์คิวถัดไปในตาราง
+        let isNext = (name === nextPerson); 
         
         tableHTML += `
           <tr class="hover:bg-slate-50 transition ${isNext ? 'bg-blue-50/50 relative' : ''}">
