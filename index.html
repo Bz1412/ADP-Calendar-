@@ -5,10 +5,10 @@
   <title>ปฏิทินการปฏิบัติงาน ผกม.</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- ดึง FullCalendar จาก CDN -->
+  <!-- 1. ดึง FullCalendar พื้นฐาน -->
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
-  <!-- ต้องดึง Plugin สำหรับ Google Calendar เพิ่มด้วย -->
-  <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/google-calendar@6.1.10/index.global.min.js'></script>
+  <!-- 2. ดึง Plugin สำหรับอ่านไฟล์ iCal (.ics) แทน Google Calendar Plugin -->
+  <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.10/index.global.min.js'></script>
   
   <style>
     body {
@@ -27,9 +27,8 @@
     }
     .fc-event-title {
       font-size: 0.9em;
-      white-space: normal; /* ให้ข้อความขึ้นบรรทัดใหม่ได้ */
+      white-space: normal;
     }
-    /* เปลี่ยนหน้าตา cursor เมื่อชี้ที่ event */
     .fc-event { cursor: pointer; }
   </style>
 </head>
@@ -42,27 +41,18 @@
       var calendarEl = document.getElementById('calendar');
 
       var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth', // แสดงผลแบบรายเดือน
-        locale: 'th', // ภาษาไทย
+        initialView: 'dayGridMonth',
+        locale: 'th',
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
-          right: 'dayGridMonth,timeGridWeek,listWeek' // เพิ่มปุ่มดูแบบรายสัปดาห์
+          right: 'dayGridMonth,listWeek'
         },
         
-        // 1. นำ API KEY ที่ได้จาก Google Cloud มาใส่ตรงนี้
-        googleCalendarApiKey: 'AIzaSyCi5Zfh1U38_ItgTsXRmZwVaHbreqMmvok',
-        
-        // 2. นำ Calendar ID มาใส่ตรงนี้
-        events: 'events: '661db2d4e0eef98e4af12082d9193ecadbd5ec47981248d6ed2ef48686515392@group.calendar.google.com',
-',
-
-        // เมื่อคลิกที่งาน ให้เปิดหน้า Google Calendar เพื่อดูรายละเอียดเต็มๆ
-        eventClick: function(info) {
-          info.jsEvent.preventDefault(); // ป้องกันไม่ให้เปิดในหน้าต่างเดิม
-          if (info.event.url) {
-            window.open(info.event.url, '_blank'); // เปิดแท็บใหม่
-          }
+        // นำลิงก์ .ics ของคุณมาใส่ตรง url ได้เลย!
+        events: {
+          url: 'https://calendar.google.com/calendar/ical/661db2d4e0eef98e4af12082d9193ecadbd5ec47981248d6ed2ef48686515392%40group.calendar.google.com/public/basic.ics',
+          format: 'ics' // บอกให้ระบบรู้ว่าเป็นไฟล์ ics
         }
       });
 
