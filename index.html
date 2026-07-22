@@ -59,7 +59,7 @@
     <div class="bg-white p-6 rounded-lg border border-neutral-200 shadow-sm">
       <div class="flex justify-between items-center border-b border-neutral-100 pb-3 mb-4">
         <h3 class="font-medium text-neutral-900">ตารางตรวจสอบคิวงาน (สถิติปีนี้)</h3>
-        <span class="text-xs text-neutral-500">*อิงจากลำดับการจัดเรียงในเมนูจัดการบุคลากร</span>
+        <span class="text-xs text-neutral-500">*เรียงลำดับจากบนลงล่าง (หมุนวนคิวต่อเนื่องอัตโนมัติ)</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse min-w-max text-sm">
@@ -105,7 +105,7 @@
         <button type="submit" class="bg-neutral-900 hover:bg-black text-white px-4 py-2 rounded-md text-sm font-medium">เพิ่ม</button>
       </form>
       <div>
-        <p class="text-xs text-neutral-500 mb-2">💡 ลากแถวเพื่อเปลี่ยนลำดับคิว (คนล่างสุดคือคิวต่อไป)</p>
+        <p class="text-xs text-neutral-500 mb-2">💡 ลากแถวเพื่อเปลี่ยนลำดับคิวบนลงล่าง</p>
         <div id="sortable-person-list" class="max-h-60 overflow-y-auto border border-neutral-200 rounded-md divide-y divide-neutral-100"></div>
       </div>
       <div class="flex justify-end pt-2">
@@ -114,7 +114,6 @@
     </div>
   </div>
 
-  <!-- Modal บันทึกงานรองรับหลายวัน -->
   <div id="taskModal" class="fixed inset-0 bg-neutral-900/40 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-xs">
     <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg border border-neutral-200 space-y-4">
       <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
@@ -175,7 +174,6 @@
     </div>
   </div>
 
-  <!-- Modal ดูรายละเอียด -->
   <div id="detailModal" class="fixed inset-0 bg-neutral-900/40 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-xs">
     <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-neutral-200 space-y-4 text-sm">
       <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
@@ -323,8 +321,12 @@
         pStats[name] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
       });
 
+      // เรียงลำดับงานตามวันที่จากอดีต -> ปัจจุบัน เพื่อหาว่าใครออกงานล่าสุด
       allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
       let todayStr = new Date().toISOString().split('T')[0];
+
+      let lastPersonWorked = null;
+      let latestTaskTime = 0;
 
       allData.forEach(item => {
         if(item.Type === 'งานใน') inside++;
@@ -335,13 +337,21 @@
         namesArr.forEach(pName => {
           if(item.Date && pStats[pName]) {
             let itemDateObj = new Date(item.Date);
+            
+            // เชื่องานล่าสุดเพื่อหาว่าใครเพิ่งไปมา
+            let timeVal = itemDateObj.getTime();
+            if(timeVal >= latestTaskTime) {
+              latestTaskTime = timeVal;
+              lastPersonWorked = pName;
+            }
+
             if (itemDateObj.getFullYear() === currentYear) {
               pStats[pName].total++;
               if(item.Type === 'งานใน') pStats[pName].inside++;
               if(item.Type === 'งานนอก') pStats[pName].outside++;
               
-              if(itemDateObj.getTime() > pStats[pName].lastDate) {
-                pStats[pName].lastDate = itemDateObj.getTime();
+              if(timeVal > pStats[pName].lastDate) {
+                pStats[pName].lastDate = timeVal;
                 pStats[pName].lastDateStr = itemDateObj.toLocaleDateString('th-TH');
               }
             }
@@ -355,7 +365,7 @@
           let startDate = new Date(item.Date).toISOString().split('T')[0];
           let endDate = item.EndDate ? new Date(item.EndDate) : new Date(item.Date);
           if(item.EndDate) {
-            endDate.setDate(endDate.getDate() + 1); // FullCalendar ต้องบวกเพิ่ม 1 วันเพื่อให้แสดงครอบคลุมวันสุดท้ายพอดี
+            endDate.setDate(endDate.getDate() + 1);
           }
           let endDateStr = endDate.toISOString().split('T')[0];
 
@@ -385,19 +395,21 @@
         ` + listHTML;
       });
 
-      let tableHTML = '';
+      // === คำนวณหา "คนต่อไป" จากลำดับคิว (บนลงล่าง, วนลูปกลับไปบนสุดถ้าถึงคนล่างสุดแล้ว) ===
       let nextPerson = '-';
-
       if (personnelList.length > 0) {
-        let sortedQueue = [...personnelList].map(name => {
-          return { name: name, ...(pStats[name] || { total: 0, lastDate: 0 }) };
-        }).sort((a, b) => {
-          if (a.total !== b.total) return a.total - b.total;
-          return a.lastDate - b.lastDate;
-        });
-        if (sortedQueue.length > 0) nextPerson = sortedQueue[0].name;
+        if (!lastPersonWorked || !personnelList.includes(lastPersonWorked)) {
+          // ถ้ายังไม่มีใครเคยออกงานเลย ให้เอาคนแรกบนสุด
+          nextPerson = personnelList[0];
+        } else {
+          // หาตำแหน่งของคนล่าสุด แล้วขยับไปคนถัดไป (ถ้าอยู่ล่างสุดแล้ว ให้วนกลับมา index 0)
+          let lastIndex = personnelList.indexOf(lastPersonWorked);
+          let nextIndex = (lastIndex + 1) % personnelList.length;
+          nextPerson = personnelList[nextIndex];
+        }
       }
 
+      let tableHTML = '';
       personnelList.forEach((name, idx) => {
         let stat = pStats[name] || { total: 0, inside: 0, outside: 0, lastDateStr: '-' };
         tableHTML += `
