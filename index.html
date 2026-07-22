@@ -2,62 +2,242 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>ปฏิทินการปฏิบัติงาน ผกม.</title>
+  <title>ระบบจัดการตารางปฏิบัติงาน</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- 1. ดึง FullCalendar พื้นฐาน -->
+  <!-- Tailwind CSS สำหรับหน้าตาสวยงาม -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FullCalendar -->
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
-  <!-- 2. ดึง Plugin สำหรับอ่านไฟล์ iCal (.ics) แทน Google Calendar Plugin -->
-  <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.10/index.global.min.js'></script>
   
   <style>
-    body {
-      font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
-      margin: 20px;
-      padding: 0;
-      background-color: #f0f4f8;
-    }
-    #calendar {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .fc-event-title {
-      font-size: 0.9em;
-      white-space: normal;
-    }
-    .fc-event { cursor: pointer; }
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
+    body { font-family: 'Prompt', sans-serif; background-color: #f1f5f9; }
+    .fc-event-title { font-size: 0.8em; white-space: normal; }
   </style>
 </head>
-<body>
+<body class="text-slate-800 p-4 md:p-8">
 
-  <div id='calendar'></div>
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">ระบบจัดการตารางปฏิบัติงาน (ผกม.)</h1>
+        <p class="text-slate-500 text-sm mt-1">สรุปข้อมูล ดึงจาก Google Sheets อัตโนมัติ</p>
+      </div>
+      <button onclick="toggleForm()" class="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md transition font-medium">
+        + เพิ่มงานใหม่
+      </button>
+    </header>
+
+    <!-- สรุปสถิติ (Stats Cards) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <p class="text-slate-500 text-sm">จำนวนงานทั้งหมด</p>
+        <h2 id="stat-total" class="text-3xl font-bold text-blue-600">0</h2>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <p class="text-slate-500 text-sm">งานใน</p>
+        <h2 id="stat-inside" class="text-3xl font-bold text-emerald-500">0</h2>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <p class="text-slate-500 text-sm">งานนอก</p>
+        <h2 id="stat-outside" class="text-3xl font-bold text-orange-500">0</h2>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <p class="text-slate-500 text-sm">ออกงานเยอะสุด</p>
+        <h2 id="stat-top-person" class="text-xl font-bold text-purple-600 mt-1">-</h2>
+      </div>
+    </div>
+
+    <!-- ฟอร์มเพิ่มข้อมูล (ซ่อนไว้เป็น Modal/Panel) -->
+    <div id="addFormPanel" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <h3 class="font-bold mb-4 text-lg border-b pb-2">บันทึกภารกิจใหม่</h3>
+      <form id="taskForm" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="submitForm(event)">
+        <input type="date" id="f_date" required class="border rounded-lg p-2 focus:ring focus:ring-blue-200">
+        <input type="text" id="f_time" placeholder="เวลา เช่น 09:00-12:00" class="border rounded-lg p-2 focus:ring focus:ring-blue-200">
+        <input type="text" id="f_name" placeholder="ชื่อผู้ปฏิบัติงาน" required class="border rounded-lg p-2 focus:ring focus:ring-blue-200">
+        <input type="text" id="f_task" placeholder="ชื่องาน/ภารกิจ" required class="border rounded-lg p-2 focus:ring focus:ring-blue-200">
+        <input type="text" id="f_location" placeholder="สถานที่" class="border rounded-lg p-2 focus:ring focus:ring-blue-200">
+        <select id="f_type" class="border rounded-lg p-2 focus:ring focus:ring-blue-200">
+          <option value="งานใน">งานใน</option>
+          <option value="งานนอก">งานนอก</option>
+        </select>
+        <div class="md:col-span-3 flex justify-end gap-2">
+          <button type="button" onclick="toggleForm()" class="px-4 py-2 text-slate-500 bg-slate-100 rounded-lg">ยกเลิก</button>
+          <button type="submit" id="submitBtn" class="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- เนื้อหาหลัก 2 คอลัมน์ (ปฏิทิน + รายการงาน) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- ปฏิทิน -->
+      <div class="md:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div id='calendar'></div>
+      </div>
+      
+      <!-- รายชื่อใครไปไหน -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[600px]">
+        <h3 class="font-bold text-lg mb-4 text-slate-800 border-b pb-2">ใครไปไหน วันนี้/เร็วๆนี้</h3>
+        <div id="list-container" class="overflow-y-auto flex-1 space-y-3 pr-2">
+          <!-- ข้อมูลจะถูก render ตรงนี้ -->
+          <div class="text-center text-slate-400 mt-10">กำลังโหลดข้อมูล...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var calendarEl = document.getElementById('calendar');
+    // === นำ URL ของ Apps Script Web App มาใส่ตรงนี้ ===
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxE8VTVv_6sj-PMOMPKVjbqBvNydNQnKkNPjpo-yzt7zjFJHoBrsr8J7Doch4D2MUrh/exec';
+    
+    let allData = [];
+    let calendar;
 
-      var calendar = new FullCalendar.Calendar(calendarEl, {
+    document.addEventListener('DOMContentLoaded', function() {
+      initCalendar();
+      fetchData();
+    });
+
+    function initCalendar() {
+      var calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         locale: 'th',
-        headerToolbar: {
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,listWeek'
-        },
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
+        height: 600
+      });
+      calendar.render();
+    }
+
+    // ฟังก์ชันดึงข้อมูลจาก Sheets (GET)
+    async function fetchData() {
+      try {
+        const response = await fetch(API_URL);
+        allData = await response.json();
         
-        // นำลิงก์ .ics ของคุณมาใส่ตรง url ได้เลย!
-        events: {
-          url: 'https://calendar.google.com/calendar/ical/661db2d4e0eef98e4af12082d9193ecadbd5ec47981248d6ed2ef48686515392%40group.calendar.google.com/public/basic.ics',
-          format: 'ics' // บอกให้ระบบรู้ว่าเป็นไฟล์ ics
+        updateDashboard();
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        document.getElementById('list-container').innerHTML = `<div class="text-red-500">ดึงข้อมูลล้มเหลว โปรดตรวจสอบลิงก์ API</div>`;
+      }
+    }
+
+    // อัปเดตส่วนต่างๆ บนหน้าเว็บ
+    function updateDashboard() {
+      let total = allData.length;
+      let inside = 0;
+      let outside = 0;
+      let personCount = {};
+      
+      let events = [];
+      let listHTML = '';
+
+      // เรียงข้อมูลตามวันที่จากใหม่ไปเก่า
+      allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+      allData.forEach(item => {
+        // นับสถิติ
+        if(item.Type === 'งานใน') inside++;
+        if(item.Type === 'งานนอก') outside++;
+        
+        if(item.Name) {
+          personCount[item.Name] = (personCount[item.Name] || 0) + 1;
         }
+
+        // จัดสี ปฏิทิน
+        let bgColor = item.Type === 'งานนอก' ? '#f97316' : '#10b981'; // ส้มสำหรับงานนอก เขียวสำหรับงานใน
+
+        // เตรียมข้อมูลใส่ปฏิทิน
+        if(item.Date) {
+          // แปลงวันที่กรณีที่เป็น format ยาวๆ จาก Google
+          let rawDate = new Date(item.Date);
+          let isoDate = rawDate.toISOString().split('T')[0];
+          
+          events.push({
+            title: `${item.Name} - ${item.Task}`,
+            start: isoDate,
+            backgroundColor: bgColor,
+            borderColor: bgColor,
+            extendedProps: { location: item.Location, time: item.Time }
+          });
+        }
+
+        // สร้าง HTML สำหรับรายการด้านขวา
+        listHTML += `
+          <div class="p-3 bg-slate-50 border-l-4 ${item.Type === 'งานนอก' ? 'border-orange-500' : 'border-emerald-500'} rounded-r-lg">
+            <p class="font-bold text-sm text-slate-800">${item.Name}</p>
+            <p class="text-xs text-slate-600 mt-1"><span class="font-semibold">งาน:</span> ${item.Task}</p>
+            <p class="text-xs text-slate-500 mt-1 flex justify-between">
+              <span>🗓️ ${new Date(item.Date).toLocaleDateString('th-TH')} | ${item.Time}</span>
+              <span class="bg-slate-200 px-2 py-0.5 rounded text-[10px]">${item.Type}</span>
+            </p>
+          </div>
+        `;
       });
 
-      calendar.render();
-    });
+      // หาคนที่ออกงานบ่อยสุด
+      let topPerson = Object.keys(personCount).length > 0 ? Object.keys(personCount).reduce((a, b) => personCount[a] > personCount[b] ? a : b) : '-';
+
+      // นำข้อมูลไปแสดงผล
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-inside').innerText = inside;
+      document.getElementById('stat-outside').innerText = outside;
+      document.getElementById('stat-top-person').innerText = topPerson;
+      
+      document.getElementById('list-container').innerHTML = listHTML || '<div class="text-slate-400">ยังไม่มีข้อมูล</div>';
+
+      // อัปเดตปฏิทิน
+      calendar.removeAllEvents();
+      calendar.addEventSource(events);
+    }
+
+    // เปิด/ปิด ฟอร์ม
+    function toggleForm() {
+      const panel = document.getElementById('addFormPanel');
+      panel.classList.toggle('hidden');
+    }
+
+    // ส่งข้อมูลกลับไปบันทึกใน Sheets (POST)
+    async function submitForm(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.innerText = 'กำลังบันทึก...';
+      btn.disabled = true;
+
+      const payload = {
+        action: 'add',
+        Date: document.getElementById('f_date').value,
+        Time: document.getElementById('f_time').value,
+        Name: document.getElementById('f_name').value,
+        Task: document.getElementById('f_task').value,
+        Location: document.getElementById('f_location').value,
+        Type: document.getElementById('f_type').value
+      };
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors', // เลี่ยงปัญหา CORS ชั่วคราวเมื่อยิงเข้า Apps Script
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        alert('บันทึกข้อมูลเรียบร้อยแล้ว (รีเฟรชเพื่อดูข้อมูลใหม่)');
+        document.getElementById('taskForm').reset();
+        toggleForm();
+        fetchData(); // ดึงข้อมูลมาอัปเดตใหม่
+      } catch (error) {
+        console.error(error);
+        alert('เกิดข้อผิดพลาดในการบันทึก');
+      } finally {
+        btn.innerText = 'บันทึกข้อมูล';
+        btn.disabled = false;
+      }
+    }
   </script>
 </body>
 </html>
