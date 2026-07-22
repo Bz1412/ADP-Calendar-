@@ -154,8 +154,12 @@
         </div>
 
         <div>
-          <label class="block text-slate-700 font-medium mb-1.5">เวลา</label>
-          <input type="text" id="f_time" placeholder="เช่น 09:00 - 12:00 น." class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <label class="block text-slate-700 font-medium mb-1.5">เวลา (เริ่ม - สิ้นสุด)</label>
+          <div class="flex items-center gap-2">
+            <input type="time" id="f_time_start" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            <span class="text-slate-400 font-medium">-</span>
+            <input type="time" id="f_time_end" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          </div>
         </div>
 
         <div>
@@ -237,6 +241,14 @@
     let calendar;
     let sortableInstance = null;
     const currentYear = new Date().getFullYear();
+
+    const themeColors = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#f43f5e', '#6366f1', '#14b8a6', '#f97316'];
+    
+    function getColorForName(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return themeColors[Math.abs(hash) % themeColors.length];
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
       initCalendar();
@@ -392,24 +404,43 @@
             lastPeopleAssigned = namesArr; // อัปเดตกลุ่มคนที่ไปงานล่าสุด
           }
 
-          // จัดการแสดงผลลงปฏิทิน
-          let isPast = item.EndDate ? (item.EndDate < todayStr) : (item.Date < todayStr);
-          let color = isPast ? '#94a3b8' : (item.Type === 'งานนอก' ? '#4f46e5' : '#0ea5e9'); // Slate, Indigo, Sky
-          let endDate = item.EndDate ? new Date(item.EndDate) : new Date(item.Date);
-          if(item.EndDate) endDate.setDate(endDate.getDate() + 1);
+                    // หาวันที่แบบไม่เพี้ยน Timezone (ใช้ค่า Text วันที่มาตรงๆ)
+          let startDateStr = item.Date.split('T')[0];
+          let endDateStrBase = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
+          
+          let todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+          let isPast = endDateStrBase < todayStr;
+          let color = isPast ? '#94a3b8' : getColorForName(item.Name); 
+
+          // บวก 1 วันสำหรับปฏิทินแบบปลอดภัย
+          let [ey, em, ed] = endDateStrBase.split('-').map(Number);
+          let endObj = new Date(ey, em - 1, ed + 1);
+          let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
+
+          // แยกเวลาเริ่มต้น
+          let startTime = '';
+          if (item.Time && item.Time.includes('-')) {
+             startTime = item.Time.split('-')[0].trim();
+          } else if (item.Time) {
+             startTime = item.Time.trim();
+          }
 
           events.push({
             title: `${item.Name} - ${item.Task}`,
-            start: itemDateObj.toISOString().split('T')[0],
-            end: endDate.toISOString().split('T')[0],
-            backgroundColor: color, borderColor: color,
+            start: startTime ? `${startDateStr}T${startTime}:00` : startDateStr,
+            end: endCalStr,
+            backgroundColor: color, 
+            borderColor: color,
+            allDay: startTime === '', 
             extendedProps: { taskData: item }
           });
 
-          // จัดการลิสต์ข้างๆ ปฏิทิน (เรียงใหม่สุดอยู่บน)
-          let dateDisplay = item.EndDate && item.EndDate !== item.Date 
-            ? `${itemDateObj.toLocaleDateString('th-TH')} - ${new Date(item.EndDate).toLocaleDateString('th-TH')}` 
-            : itemDateObj.toLocaleDateString('th-TH');
+          // จัดการรูปแบบวันที่แสดงผลในการ์ดด้านข้าง
+          let [sy, sm, sd] = startDateStr.split('-').map(Number);
+          let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
+          let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
+          
+          let dateDisplay = startDateStr !== endDateStrBase ? `${startLocal} - ${endLocal}` : startLocal;
 
           listHTML = `
             <div onclick='showDetailModal(${JSON.stringify(item)})' class="p-3 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl shadow-sm cursor-pointer transition mb-2 group">
@@ -498,7 +529,9 @@
         document.getElementById('edit_task_id').value = itemToEdit.ID || '';
         document.getElementById('f_date').value = itemToEdit.Date ? itemToEdit.Date.split('T')[0] : '';
         document.getElementById('f_end_date').value = itemToEdit.EndDate ? itemToEdit.EndDate.split('T')[0] : '';
-        document.getElementById('f_time').value = itemToEdit.Time || '';
+        let timeParts = itemToEdit.Time ? itemToEdit.Time.split('-') : [];
+        document.getElementById('f_time_start').value = timeParts[0] ? timeParts[0].trim() : '';
+        document.getElementById('f_time_end').value = timeParts[1] ? timeParts[1].trim() : '';
         document.getElementById('f_task').value = itemToEdit.Task || '';
         document.getElementById('f_location').value = itemToEdit.Location || '';
         document.getElementById('f_type').value = itemToEdit.Type || 'งานใน';
@@ -512,17 +545,26 @@
         document.getElementById('taskModalTitle').innerHTML = '➕ บันทึกภารกิจใหม่';
         document.getElementById('edit_task_id').value = '';
         document.getElementById('btnDeleteTask').classList.add('hidden');
+        document.getElementById('f_time_start').value = '';
+        document.getElementById('f_time_end').value = '';
       }
       openModal('taskModal');
     }
 
-    function showDetailModal(item) {
+      function showDetailModal(item) {
       document.getElementById('d_task').innerText = item.Task || '-';
       document.getElementById('d_type').innerText = item.Type || '-';
       
-      let dateDisplay = item.EndDate && item.EndDate !== item.Date 
-        ? `${new Date(item.Date).toLocaleDateString('th-TH')} - ${new Date(item.EndDate).toLocaleDateString('th-TH')}` 
-        : new Date(item.Date).toLocaleDateString('th-TH');
+      // จัดการวันที่แบบไม่เพี้ยน Timezone
+      let startDateStr = item.Date.split('T')[0];
+      let endDateStrBase = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
+      
+      let [sy, sm, sd] = startDateStr.split('-').map(Number);
+      let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
+      let [ey, em, ed] = endDateStrBase.split('-').map(Number);
+      let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
+      
+      let dateDisplay = startDateStr !== endDateStrBase ? `${startLocal} - ${endLocal}` : startLocal;
 
       document.getElementById('d_date').innerText = dateDisplay;
       document.getElementById('d_time').innerText = item.Time || '-';
@@ -562,7 +604,7 @@
         ID: document.getElementById('edit_task_id').value || new Date().getTime(),
         Date: document.getElementById('f_date').value,
         EndDate: document.getElementById('f_end_date').value || document.getElementById('f_date').value,
-        Time: document.getElementById('f_time').value,
+        Time: (document.getElementById('f_time_start').value || '') + (document.getElementById('f_time_end').value ? '-' + document.getElementById('f_time_end').value : ''),
         Name: selectedNames.join(', '),
         Task: document.getElementById('f_task').value,
         Location: document.getElementById('f_location').value,
