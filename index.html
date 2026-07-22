@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>ปฏิทินการปฏิบัติงาน ผกม.</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- ดึง FullCalendar จาก CDN -->
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+  <!-- ต้องดึง Plugin สำหรับ Google Calendar เพิ่มด้วย -->
+  <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/google-calendar@6.1.10/index.global.min.js'></script>
+  
+  <style>
+    body {
+      font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+      margin: 20px;
+      padding: 0;
+      background-color: #f0f4f8;
+    }
+    #calendar {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .fc-event-title {
+      font-size: 0.9em;
+      white-space: normal; /* ให้ข้อความขึ้นบรรทัดใหม่ได้ */
+    }
+    /* เปลี่ยนหน้าตา cursor เมื่อชี้ที่ event */
+    .fc-event { cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <div id='calendar'></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var calendarEl = document.getElementById('calendar');
+
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth', // แสดงผลแบบรายเดือน
+        locale: 'th', // ภาษาไทย
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,listWeek' // เพิ่มปุ่มดูแบบรายสัปดาห์
+        },
+        
+        // 1. นำ API KEY ที่ได้จาก Google Cloud มาใส่ตรงนี้
+        googleCalendarApiKey: 'AIzaSyCi5Zfh1U38_ItgTsXRmZwVaHbreqMmvok',
+        
+        // 2. นำ Calendar ID มาใส่ตรงนี้
+        events: 'events: '661db2d4e0eef98e4af12082d9193ecadbd5ec47981248d6ed2ef48686515392@group.calendar.google.com',
+',
+
+        // เมื่อคลิกที่งาน ให้เปิดหน้า Google Calendar เพื่อดูรายละเอียดเต็มๆ
+        eventClick: function(info) {
+          info.jsEvent.preventDefault(); // ป้องกันไม่ให้เปิดในหน้าต่างเดิม
+          if (info.event.url) {
+            window.open(info.event.url, '_blank'); // เปิดแท็บใหม่
+          }
+        }
+      });
+
+      calendar.render();
+    });
+  </script>
+</body>
+</html>
