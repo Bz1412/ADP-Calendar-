@@ -2,32 +2,35 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>ระบบจัดการตารางปฏิบัติงาน</title>
+  <title>ระบบจัดการตารางปฏิบัติงาน ผกม.</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+  <!-- SortableJS สำหรับลากสลับคิว -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
-    body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+    body { font-family: 'Prompt', sans-serif; background-color: #fafafa; color: #171717; }
     .fc-event-title { font-size: 0.8em; white-space: normal; }
-    #list-container::-webkit-scrollbar { width: 6px; }
-    #list-container::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+    #list-container::-webkit-scrollbar { width: 4px; }
+    #list-container::-webkit-scrollbar-thumb { background-color: #d4d4d4; border-radius: 4px; }
   </style>
 </head>
-<body class="text-slate-800 pb-10">
+<body class="pb-12">
 
-  <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+  <!-- Navbar Minimal -->
+  <nav class="bg-white border-b border-neutral-200 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-slate-800">ตารางปฏิบัติงาน ผกม.</h1>
+        <h1 class="text-xl font-semibold tracking-tight">ตารางปฏิบัติงาน ผกม.</h1>
       </div>
-      <div class="flex gap-3">
-        <button onclick="openModal('personModal')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition shadow-sm border border-slate-200">
-          + เพิ่มชื่อบุคลากร
+      <div class="flex items-center gap-2">
+        <button onclick="openModal('personModal')" class="bg-white hover:bg-neutral-100 text-neutral-800 px-4 py-2 rounded-md text-sm font-medium transition border border-neutral-300">
+          ⚙️ จัดการบุคลากร & เรียงคิว
         </button>
-        <button onclick="openModal('taskModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition shadow-md">
+        <button onclick="openTaskModal()" class="bg-neutral-900 hover:bg-black text-white px-4 py-2 rounded-md text-sm font-medium transition">
           + บันทึกงานใหม่
         </button>
       </div>
@@ -36,135 +39,185 @@
 
   <div class="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
     
+    <!-- Stats Cards Minimal -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
-        <p class="text-slate-500 text-sm font-medium">งานทั้งหมด</p>
-        <h2 id="stat-total" class="text-3xl font-bold text-slate-700 mt-1">0</h2>
+      <div class="bg-white p-5 rounded-lg border border-neutral-200 shadow-sm">
+        <p class="text-neutral-500 text-xs font-medium uppercase tracking-wider">งานทั้งหมด</p>
+        <h2 id="stat-total" class="text-2xl font-semibold text-neutral-900 mt-1">0</h2>
       </div>
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
-        <p class="text-slate-500 text-sm font-medium">งานใน</p>
-        <h2 id="stat-inside" class="text-3xl font-bold text-slate-700 mt-1">0</h2>
+      <div class="bg-white p-5 rounded-lg border border-neutral-200 shadow-sm">
+        <p class="text-neutral-500 text-xs font-medium uppercase tracking-wider">งานใน</p>
+        <h2 id="stat-inside" class="text-2xl font-semibold text-neutral-900 mt-1">0</h2>
       </div>
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-orange-500">
-        <p class="text-slate-500 text-sm font-medium">งานนอก</p>
-        <h2 id="stat-outside" class="text-3xl font-bold text-slate-700 mt-1">0</h2>
+      <div class="bg-white p-5 rounded-lg border border-neutral-200 shadow-sm">
+        <p class="text-neutral-500 text-xs font-medium uppercase tracking-wider">งานนอก</p>
+        <h2 id="stat-outside" class="text-2xl font-semibold text-neutral-900 mt-1">0</h2>
       </div>
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-purple-500">
-        <p class="text-slate-500 text-sm font-medium">บุคคลออกงานสูงสุด</p>
-        <h2 id="stat-top-person" class="text-xl font-bold text-slate-700 mt-1 truncate">-</h2>
+      <div class="bg-white p-5 rounded-lg border border-neutral-200 shadow-sm bg-neutral-900 text-white">
+        <p class="text-neutral-400 text-xs font-medium uppercase tracking-wider">คิวต่อไปที่ต้องออกงาน</p>
+        <h2 id="stat-next-person" class="text-lg font-semibold mt-1 truncate">-</h2>
       </div>
     </div>
 
-    <!-- ส่วนที่เพิ่มใหม่: ตารางสรุปคิวงาน (Log 1 ปี) -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <div class="flex justify-between items-center border-b pb-3 mb-4">
-        <h3 class="font-bold text-lg text-slate-800">ตารางตรวจสอบคิวงาน (สถิติปีนี้)</h3>
-        <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">*เรียงลำดับจากคนออกงานน้อยสุดไปมากสุด</span>
+    <!-- ตารางตรวจสอบคิวงาน (Log 1 ปี) -->
+    <div class="bg-white p-6 rounded-lg border border-neutral-200 shadow-sm">
+      <div class="flex justify-between items-center border-b border-neutral-100 pb-3 mb-4">
+        <h3 class="font-medium text-neutral-900">ตารางตรวจสอบคิวงาน (สถิติปีนี้)</h3>
+        <span class="text-xs text-neutral-500">*อิงจากลำดับการจัดเรียงในเมนูจัดการบุคลากร</span>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-max">
+        <table class="w-full text-left border-collapse min-w-max text-sm">
           <thead>
-            <tr class="bg-slate-50 text-slate-600 text-sm">
-              <th class="p-3 border-b font-medium rounded-tl-lg">ชื่อบุคลากร</th>
-              <th class="p-3 border-b font-medium text-center">รวม (ปีนี้)</th>
-              <th class="p-3 border-b font-medium text-center">งานใน</th>
-              <th class="p-3 border-b font-medium text-center">งานนอก</th>
-              <th class="p-3 border-b font-medium rounded-tr-lg">ไปล่าสุดเมื่อ</th>
+            <tr class="bg-neutral-50 text-neutral-500 font-medium border-b border-neutral-200">
+              <th class="p-3">ลำดับคิว</th>
+              <th class="p-3">ชื่อบุคลากร</th>
+              <th class="p-3 text-center">รวม (งาน)</th>
+              <th class="p-3 text-center">งานใน</th>
+              <th class="p-3 text-center">งานนอก</th>
+              <th class="p-3">ไปล่าสุดเมื่อ</th>
             </tr>
           </thead>
           <tbody id="personnel-stats-table">
-            <tr><td colspan="5" class="text-center p-4 text-slate-400">กำลังโหลดข้อมูล...</td></tr>
+            <tr><td colspan="6" class="text-center p-4 text-neutral-400">กำลังโหลดข้อมูล...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
+    <!-- ส่วนเนื้อหาหลัก: ปฏิทิน (ซ้าย) และ รายการงาน (ขวา) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div class="lg:col-span-2 bg-white p-6 rounded-lg border border-neutral-200 shadow-sm">
         <div id='calendar'></div>
       </div>
-      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-[650px]">
-        <h3 class="font-bold text-lg mb-4 text-slate-800 border-b pb-2">รายละเอียดงานเร็วๆ นี้</h3>
+      <div class="bg-white p-6 rounded-lg border border-neutral-200 shadow-sm flex flex-col h-[650px]">
+        <h3 class="font-medium text-neutral-900 mb-4 border-b border-neutral-100 pb-2">รายการงานเร็วๆ นี้</h3>
         <div id="list-container" class="overflow-y-auto flex-1 space-y-3 pr-2">
-          <div class="text-center text-slate-400 mt-10">กำลังโหลดข้อมูล...</div>
+          <div class="text-center text-neutral-400 mt-10 text-sm">กำลังโหลดข้อมูล...</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modals สำหรับเพิ่มงานและชื่อคนเหมือนเดิม -->
-  <div id="taskModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm">
-    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-lg">
-      <div class="flex justify-between items-center mb-5 border-b pb-3">
-        <h3 class="font-bold text-xl text-slate-800">บันทึกภารกิจใหม่</h3>
-        <button onclick="closeModal('taskModal')" class="text-slate-400 hover:text-red-500 text-2xl leading-none">&times;</button>
+  <!-- ================= MODALS ================= -->
+
+  <!-- Modal: จัดการบุคลากร & เรียงคิว -->
+  <div id="personModal" class="fixed inset-0 bg-neutral-900/40 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-xs">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg border border-neutral-200 space-y-4">
+      <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+        <h3 class="font-semibold text-neutral-900">จัดการบุคลากร & จัดลำดับคิว (ลากขึ้น-ลง)</h3>
+        <button onclick="closeModal('personModal')" class="text-neutral-400 hover:text-black text-xl">&times;</button>
       </div>
-      <form id="taskForm" onsubmit="submitTaskForm(event)" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+
+      <!-- ฟอร์มเพิ่มคน -->
+      <form onsubmit="addNewPerson(event)" class="flex gap-2">
+        <input type="text" id="new_p_name" required placeholder="เพิ่มชื่อ-นามสกุล หรือยศ..." class="flex-1 border border-neutral-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-black">
+        <button type="submit" class="bg-neutral-900 hover:bg-black text-white px-4 py-2 rounded-md text-sm font-medium">เพิ่ม</button>
+      </form>
+
+      <!-- รายชื่อแบบลากได้ -->
+      <div>
+        <p class="text-xs text-neutral-500 mb-2">💡 ลากแถวเพื่อเปลี่ยนลำดับคิว (คนล่างสุดคือคิวต่อไป)</p>
+        <div id="sortable-person-list" class="max-h-60 overflow-y-auto border border-neutral-200 rounded-md divide-y divide-neutral-100">
+          <!-- Render by JS -->
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="savePersonnelOrder()" class="bg-neutral-900 hover:bg-black text-white px-5 py-2 rounded-md text-sm font-medium">บันทึกลำดับคิว</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: บันทึกงานใหม่ (เลือกหลายคนได้) -->
+  <div id="taskModal" class="fixed inset-0 bg-neutral-900/40 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-xs">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg border border-neutral-200 space-y-4">
+      <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+        <h3 id="taskModalTitle" class="font-semibold text-neutral-900">บันทึกภารกิจใหม่</h3>
+        <button onclick="closeModal('taskModal')" class="text-neutral-400 hover:text-black text-xl">&times;</button>
+      </div>
+      
+      <form id="taskForm" onsubmit="submitTaskForm(event)" class="space-y-3 text-sm">
+        <input type="hidden" id="edit_task_id">
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-sm text-slate-600 mb-1">วันที่</label>
-            <input type="date" id="f_date" required class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label class="block text-neutral-600 mb-1">วันที่</label>
+            <input type="date" id="f_date" required class="w-full border border-neutral-300 rounded-md p-2 focus:outline-none focus:border-black">
           </div>
           <div>
-            <label class="block text-sm text-slate-600 mb-1">เวลา</label>
-            <input type="text" id="f_time" placeholder="เช่น 09:00-12:00" class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label class="block text-neutral-600 mb-1">เวลา</label>
+            <input type="text" id="f_time" placeholder="เช่น 09:00-12:00" class="w-full border border-neutral-300 rounded-md p-2 focus:outline-none focus:border-black">
           </div>
         </div>
+
         <div>
-          <label class="block text-sm text-slate-600 mb-1">ชื่อผู้ปฏิบัติงาน</label>
-          <select id="f_name" required class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">-- กำลังโหลดรายชื่อ --</option>
-          </select>
+          <label class="block text-neutral-600 mb-1">ผู้ปฏิบัติงาน (เลือกได้มากกว่า 1 คน)</label>
+          <div id="checkbox-person-list" class="max-h-36 overflow-y-auto border border-neutral-300 rounded-md p-2 space-y-1 bg-neutral-50">
+            <!-- Checkboxes generated by JS -->
+          </div>
         </div>
+
         <div>
-          <label class="block text-sm text-slate-600 mb-1">ชื่องาน/ภารกิจ</label>
-          <input type="text" id="f_task" required class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <label class="block text-neutral-600 mb-1">ชื่องาน/ภารกิจ</label>
+          <input type="text" id="f_task" required class="w-full border border-neutral-300 rounded-md p-2 focus:outline-none focus:border-black">
         </div>
-        <div class="grid grid-cols-2 gap-4">
+
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-sm text-slate-600 mb-1">ประเภท</label>
-            <select id="f_type" class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label class="block text-neutral-600 mb-1">ประเภท</label>
+            <select id="f_type" class="w-full border border-neutral-300 rounded-md p-2 focus:outline-none focus:border-black">
               <option value="งานใน">งานใน</option>
               <option value="งานนอก">งานนอก</option>
             </select>
           </div>
           <div>
-            <label class="block text-sm text-slate-600 mb-1">สถานที่</label>
-            <input type="text" id="f_location" class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label class="block text-neutral-600 mb-1">สถานที่</label>
+            <input type="text" id="f_location" class="w-full border border-neutral-300 rounded-md p-2 focus:outline-none focus:border-black">
           </div>
         </div>
-        <div class="pt-4 flex justify-end gap-3">
-          <button type="button" onclick="closeModal('taskModal')" class="px-5 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">ยกเลิก</button>
-          <button type="submit" id="btnSubmitTask" class="px-5 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">บันทึกข้อมูล</button>
+        
+        <div class="pt-3 flex justify-between">
+          <button type="button" id="btnDeleteTask" onclick="deleteCurrentTask()" class="hidden text-red-600 hover:underline text-xs">ลบงานนี้</button>
+          <div class="flex gap-2 ml-auto">
+            <button type="button" onclick="closeModal('taskModal')" class="px-4 py-2 bg-neutral-100 rounded-md text-neutral-700">ยกเลิก</button>
+            <button type="submit" id="btnSubmitTask" class="px-5 py-2 bg-neutral-900 text-white rounded-md hover:bg-black">บันทึก</button>
+          </div>
         </div>
       </form>
     </div>
   </div>
 
-  <div id="personModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm">
-    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm">
-      <div class="flex justify-between items-center mb-4 border-b pb-2">
-        <h3 class="font-bold text-lg text-slate-800">เพิ่มชื่อบุคลากร</h3>
-        <button onclick="closeModal('personModal')" class="text-slate-400 hover:text-red-500 text-2xl leading-none">&times;</button>
+  <!-- Modal: ดูรายละเอียดงาน (เมื่อคลิกการ์ดหรือปฏิทิน) -->
+  <div id="detailModal" class="fixed inset-0 bg-neutral-900/40 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-xs">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-neutral-200 space-y-4 text-sm">
+      <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+        <h3 id="d_title" class="font-semibold text-neutral-900 text-base">รายละเอียดภารกิจ</h3>
+        <button onclick="closeModal('detailModal')" class="text-neutral-400 hover:text-black text-xl">&times;</button>
       </div>
-      <form id="personForm" onsubmit="submitPersonForm(event)">
-        <label class="block text-sm text-slate-600 mb-2">ชื่อ-นามสกุล / ยศ</label>
-        <input type="text" id="p_name" required placeholder="เช่น จ.ท. กฤษณะ" class="w-full border rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <div class="flex justify-end gap-2">
-          <button type="button" onclick="closeModal('personModal')" class="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">ยกเลิก</button>
-          <button type="submit" id="btnSubmitPerson" class="px-4 py-2 text-white bg-slate-800 rounded-lg hover:bg-slate-900">เพิ่มชื่อ</button>
+      <div class="space-y-2 text-neutral-700">
+        <p><strong>ชื่องาน:</strong> <span id="d_task">-</span></p>
+        <p><strong>ประเภท:</strong> <span id="d_type">-</span></p>
+        <p><strong>วันที่:</strong> <span id="d_date">-</span> | <strong>เวลา:</strong> <span id="d_time">-</span></p>
+        <p><strong>สถานที่:</strong> <span id="d_location">-</span></p>
+        <div>
+          <strong>ผู้ปฏิบัติงาน:</strong>
+          <ul id="d_names" class="list-disc list-inside mt-1 text-neutral-600 bg-neutral-50 p-2 rounded border border-neutral-200"></ul>
         </div>
-      </form>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+        <button id="d_btnEdit" onclick="" class="px-4 py-1.5 bg-neutral-200 hover:bg-neutral-300 rounded text-xs font-medium">แก้ไขงาน</button>
+        <button onclick="closeModal('detailModal')" class="px-4 py-1.5 bg-neutral-900 text-white rounded text-xs font-medium">ปิด</button>
+      </div>
     </div>
   </div>
 
+  <!-- ================= SCRIPTS ================= -->
   <script>
-    // === อย่าลืมนำ URL ของ Apps Script มาใส่ตรงนี้ ===
     const API_URL = 'https://script.google.com/macros/s/AKfycbxE8VTVv_6sj-PMOMPKVjbqBvNydNQnKkNPjpo-yzt7zjFJHoBrsr8J7Doch4D2MUrh/exec';
     
     let allData = [];
     let personnelList = [];
     let calendar;
+    let sortableInstance = null;
     const currentYear = new Date().getFullYear();
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -178,12 +231,18 @@
         initialView: 'dayGridMonth',
         locale: 'th',
         headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
-        height: 600
+        height: 600,
+        eventClick: function(info) {
+          showDetailModal(info.event.extendedProps.taskData);
+        }
       });
       calendar.render();
     }
 
-    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function openModal(id) { 
+      document.getElementById(id).style.display = 'flex'; 
+      if(id === 'personModal') renderSortablePersonnel();
+    }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
     async function fetchData() {
@@ -194,128 +253,239 @@
         personnelList = data.personnel || [];
         
         updateDashboard();
-        updatePersonnelDropdown();
+        renderPersonnelCheckboxes();
       } catch (error) {
         console.error("Error fetching:", error);
-        document.getElementById('list-container').innerHTML = `<div class="text-red-500 text-center">ดึงข้อมูลล้มเหลว โปรดตรวจสอบลิงก์ API หรือการ Deploy Web App อีกครั้ง</div>`;
-        document.getElementById('personnel-stats-table').innerHTML = `<tr><td colspan="5" class="text-center p-4 text-red-500">ดึงข้อมูลล้มเหลว</td></tr>`;
+        document.getElementById('list-container').innerHTML = `<div class="text-red-500 text-center text-sm">ดึงข้อมูลล้มเหลว กรุณาตรวจสอบอินเทอร์เน็ตหรือ Apps Script</div>`;
       }
     }
 
-    function updatePersonnelDropdown() {
-      const select = document.getElementById('f_name');
+    // Render รายชื่อแบบเลือก Checkbox ในฟอร์มเพิ่มงาน
+    function renderPersonnelCheckboxes() {
+      const container = document.getElementById('checkbox-person-list');
       if (personnelList.length === 0) {
-        select.innerHTML = '<option value="">-- โหลดรายชื่อไม่ขึ้น หรือ ยังไม่มีชื่อ --</option>';
+        container.innerHTML = '<span class="text-xs text-neutral-400">ยังไม่มีรายชื่อบุคลากร (โปรดเพิ่มในเมนูตั้งค่า)</span>';
         return;
       }
-      select.innerHTML = '<option value="">-- เลือกบุคลากร --</option>';
+      container.innerHTML = '';
       personnelList.forEach(name => {
-        let opt = document.createElement('option');
-        opt.value = name;
-        opt.innerHTML = name;
-        select.appendChild(opt);
+        container.innerHTML += `
+          <label class="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer hover:bg-neutral-100 p-1 rounded">
+            <input type="checkbox" name="task_person" value="${name}" class="rounded border-neutral-300">
+            <span>${name}</span>
+          </label>
+        `;
       });
+    }
+
+    // Render รายชื่อสำหรับลากสลับคิว
+    function renderSortablePersonnel() {
+      const container = document.getElementById('sortable-person-list');
+      container.innerHTML = '';
+      personnelList.forEach((name, index) => {
+        container.innerHTML += `
+          <div data-name="${name}" class="flex justify-between items-center p-2.5 bg-white text-xs cursor-grab active:cursor-grabbing hover:bg-neutral-50">
+            <span class="font-medium text-neutral-800">⠿ ${name}</span>
+            <button type="button" onclick="deletePerson('${name}')" class="text-neutral-400 hover:text-red-600 px-2">ลบ</button>
+          </div>
+        `;
+      });
+
+      if(sortableInstance) sortableInstance.destroy();
+      sortableInstance = new Sortable(container, {
+        animation: 150,
+        ghostClass: 'bg-neutral-100'
+      });
+    }
+
+    // บันทึกลำดับคิวใหม่
+    async function savePersonnelOrder() {
+      const items = document.querySelectorAll('#sortable-person-list > div');
+      let newOrder = [];
+      items.forEach(el => newOrder.push(el.getAttribute('data-name')));
+
+      const btn = event.target;
+      btn.innerText = 'กำลังบันทึก...';
+      
+      await postData({ action: 'update_personnel', personnel: newOrder });
+      personnelList = newOrder;
+      closeModal('personModal');
+      updateDashboard();
+      btn.innerText = 'บันทึกลำดับคิว';
+    }
+
+    async function addNewPerson(e) {
+      e.preventDefault();
+      const name = document.getElementById('new_p_name').value.trim();
+      if(!name) return;
+      
+      await postData({ action: 'add_person', Name: name });
+      document.getElementById('new_p_name').value = '';
+      await fetchData();
+      renderSortablePersonnel();
+    }
+
+    async function deletePerson(name) {
+      if(!confirm(`ต้องการลบ ${name} ออกจากระบบใช่หรือไม่?`)) return;
+      await postData({ action: 'delete_person', Name: name });
+      await fetchData();
+      renderSortablePersonnel();
     }
 
     function updateDashboard() {
       let total = allData.length;
       let inside = 0;
       let outside = 0;
-      let personCount = {};
       let events = [];
       let listHTML = '';
 
-      // สำหรับสรุป Log รายบุคคล
       let pStats = {};
-      // กำหนดค่าเริ่มต้นให้ทุกคนในแผนกก่อน เพื่อให้คนที่ยอด 0 โผล่มาในคิวด้วย
       personnelList.forEach(name => {
         pStats[name] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
       });
 
       allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+      let todayStr = new Date().toISOString().split('T')[0];
 
       allData.forEach(item => {
         if(item.Type === 'งานใน') inside++;
         if(item.Type === 'งานนอก') outside++;
-        if(item.Name) personCount[item.Name] = (personCount[item.Name] || 0) + 1;
 
-        // คำนวณ Log สถิติ
-        if(item.Date && item.Name) {
-          let itemDateObj = new Date(item.Date);
-          if (itemDateObj.getFullYear() === currentYear) {
-            let pName = item.Name;
-            if(!pStats[pName]) pStats[pName] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
-            
-            pStats[pName].total++;
-            if(item.Type === 'งานใน') pStats[pName].inside++;
-            if(item.Type === 'งานนอก') pStats[pName].outside++;
-            
-            if(itemDateObj.getTime() > pStats[pName].lastDate) {
-              pStats[pName].lastDate = itemDateObj.getTime();
-              pStats[pName].lastDateStr = itemDateObj.toLocaleDateString('th-TH');
+        // รองรับทั้งแบบระบุชื่อเดียวหรือหลายชื่อ (คั่นด้วยคอมมา)
+        let namesArr = item.Name ? item.Name.split(',').map(n => n.trim()) : [];
+
+        namesArr.forEach(pName => {
+          if(item.Date && pStats[pName]) {
+            let itemDateObj = new Date(item.Date);
+            if (itemDateObj.getFullYear() === currentYear) {
+              pStats[pName].total++;
+              if(item.Type === 'งานใน') pStats[pName].inside++;
+              if(item.Type === 'งานนอก') pStats[pName].outside++;
+              
+              if(itemDateObj.getTime() > pStats[pName].lastDate) {
+                pStats[pName].lastDate = itemDateObj.getTime();
+                pStats[pName].lastDateStr = itemDateObj.toLocaleDateString('th-TH');
+              }
             }
           }
-        }
+        });
 
-        let bgColor = item.Type === 'งานนอก' ? '#f97316' : '#10b981';
+        // กำหนดสีตามสถานะ: งานที่ผ่านมาแล้ว vs งานยังไม่มาถึง
+        let isPast = item.Date < todayStr;
+        let bgColor = isPast ? '#a3a3a3' : (item.Type === 'งานนอก' ? '#262626' : '#737373'); // Minimal shades
+
         if(item.Date) {
           let isoDate = new Date(item.Date).toISOString().split('T')[0];
           events.push({
             title: `${item.Name} - ${item.Task}`,
             start: isoDate,
             backgroundColor: bgColor,
-            borderColor: bgColor
+            borderColor: bgColor,
+            extendedProps: { taskData: item }
           });
         }
 
+        let escapedItem = JSON.stringify(item).replace(/"/g, '&quot;');
+
         listHTML = `
-          <div class="p-4 bg-slate-50 border-l-4 ${item.Type === 'งานนอก' ? 'border-orange-500' : 'border-emerald-500'} rounded-r-xl shadow-sm mb-3">
+          <div onclick='showDetailModal(${JSON.stringify(item)})' class="p-3 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-lg shadow-2xs cursor-pointer transition mb-2">
             <div class="flex justify-between items-start">
-              <p class="font-bold text-slate-800">${item.Name}</p>
-              <span class="bg-slate-200 px-2 py-0.5 rounded text-[10px] font-semibold">${item.Type}</span>
+              <p class="font-medium text-xs text-neutral-900">${item.Name}</p>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-neutral-100 text-neutral-600">${item.Type} ${isPast ? '(ผ่านมาแล้ว)' : ''}</span>
             </div>
-            <p class="text-sm text-slate-600 mt-1">${item.Task} ${item.Location ? `(@${item.Location})` : ''}</p>
-            <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
-              🗓️ ${new Date(item.Date).toLocaleDateString('th-TH')} ⏰ ${item.Time || '-'}
-            </p>
+            <p class="text-xs text-neutral-700 mt-1">📌 ${item.Task}</p>
+            <p class="text-[11px] text-neutral-400 mt-2">🗓️ ${new Date(item.Date).toLocaleDateString('th-TH')} | ⏰ ${item.Time || '-'}</p>
           </div>
-        ` + listHTML; // เรียงเอาอันใหม่สุดไว้บนสุดใน Feed ด้านขวา
+        ` + listHTML;
       });
 
-      // จัดการตารางเรียงคิว
-      let sortedStats = Object.keys(pStats).map(name => {
-        return { name: name, ...pStats[name] };
-      }).sort((a, b) => a.total - b.total); // เรียงจากคนไปน้อยสุด
-
+      // จัดการตารางเรียงคิว (ยึดตามลำดับใน personnelList ที่จัดเรียงล่าสุด)
       let tableHTML = '';
-      if(sortedStats.length === 0) {
-        tableHTML = `<tr><td colspan="5" class="text-center p-4 text-slate-400">ยังไม่มีข้อมูลบุคลากร</td></tr>`;
-      } else {
-        sortedStats.forEach(stat => {
-          // คนที่ยังไม่เคยออกงาน จะเป็นไฮไลท์สีอ่อนๆ ไว้บนสุด
-          let rowClass = stat.total === 0 ? 'bg-blue-50/50 font-medium' : 'hover:bg-slate-50';
-          tableHTML += `
-            <tr class="border-b border-slate-100 ${rowClass}">
-              <td class="p-3 text-slate-800">${stat.name}</td>
-              <td class="p-3 text-center font-bold ${stat.total === 0 ? 'text-slate-400' : 'text-blue-600'}">${stat.total}</td>
-              <td class="p-3 text-center text-slate-500">${stat.inside}</td>
-              <td class="p-3 text-center text-slate-500">${stat.outside}</td>
-              <td class="p-3 text-sm text-slate-500">${stat.lastDateStr}</td>
-            </tr>
-          `;
-        });
-      }
-      document.getElementById('personnel-stats-table').innerHTML = tableHTML;
+      let nextPerson = '-';
 
-      let topPerson = Object.keys(personCount).length > 0 ? Object.keys(personCount).reduce((a, b) => personCount[a] > personCount[b] ? a : b) : '-';
+      // คิวต่อไปอิงจากคนล่างสุดในลิสต์ (หรือคนที่มีสถิติน้อยสุดตามลำดับลาก)
+      if(personnelList.length > 0) {
+        // สมมติให้คนล่างสุดเป็นคิวถัดไป หรือเลือกคนที่ยอดรวมน้อยที่สุด
+        let sortedQueue = [...personnelList].reverse();
+        nextPerson = sortedQueue[0] || '-';
+      }
+
+      personnelList.forEach((name, idx) => {
+        let stat = pStats[name] || { total: 0, inside: 0, outside: 0, lastDateStr: '-' };
+        tableHTML += `
+          <tr class="border-b border-neutral-100 hover:bg-neutral-50">
+            <td class="p-3 text-neutral-400 font-mono">#${idx + 1}</td>
+            <td class="p-3 font-medium text-neutral-900">${name}</td>
+            <td class="p-3 text-center font-semibold text-neutral-900">${stat.total}</td>
+            <td class="p-3 text-center text-neutral-600">${stat.inside}</td>
+            <td class="p-3 text-center text-neutral-600">${stat.outside}</td>
+            <td class="p-3 text-xs text-neutral-500">${stat.lastDateStr}</td>
+          </tr>
+        `;
+      });
+
+      if(personnelList.length === 0) {
+        tableHTML = `<tr><td colspan="6" class="text-center p-4 text-neutral-400 text-xs">ยังไม่มีรายชื่อบุคลากร</td></tr>`;
+      }
+
+      document.getElementById('personnel-stats-table').innerHTML = tableHTML;
       document.getElementById('stat-total').innerText = total;
       document.getElementById('stat-inside').innerText = inside;
       document.getElementById('stat-outside').innerText = outside;
-      document.getElementById('stat-top-person').innerText = topPerson;
-      document.getElementById('list-container').innerHTML = listHTML || '<div class="text-slate-400 text-center">ยังไม่มีข้อมูลงาน</div>';
+      document.getElementById('stat-next-person').innerText = nextPerson;
+      document.getElementById('list-container').innerHTML = listHTML || '<div class="text-neutral-400 text-center text-xs mt-10">ยังไม่มีข้อมูลงาน</div>';
 
       calendar.removeAllEvents();
       calendar.addEventSource(events);
+    }
+
+    function openTaskModal(itemToEdit = null) {
+      renderPersonnelCheckboxes();
+      document.getElementById('taskForm').reset();
+      
+      if(itemToEdit) {
+        document.getElementById('taskModalTitle').innerText = 'แก้ไขภารกิจ';
+        document.getElementById('edit_task_id').value = itemToEdit.ID || '';
+        document.getElementById('f_date').value = itemToEdit.Date ? itemToEdit.Date.split('T')[0] : '';
+        document.getElementById('f_time').value = itemToEdit.Time || '';
+        document.getElementById('f_task').value = itemToEdit.Task || '';
+        document.getElementById('f_location').value = itemToEdit.Location || '';
+        document.getElementById('f_type').value = itemToEdit.Type || 'งานใน';
+        document.getElementById('btnDeleteTask').classList.remove('hidden');
+
+        // ติ๊กชื่อคนเดิม
+        let assignedNames = itemToEdit.Name ? itemToEdit.Name.split(',').map(n => n.trim()) : [];
+        document.querySelectorAll('input[name="task_person"]').forEach(cb => {
+          if(assignedNames.includes(cb.value)) cb.checked = true;
+        });
+      } else {
+        document.getElementById('taskModalTitle').innerText = 'บันทึกภารกิจใหม่';
+        document.getElementById('edit_task_id').value = '';
+        document.getElementById('btnDeleteTask').classList.add('hidden');
+      }
+      openModal('taskModal');
+    }
+
+    function showDetailModal(item) {
+      document.getElementById('d_task').innerText = item.Task || '-';
+      document.getElementById('d_type').innerText = item.Type || '-';
+      document.getElementById('d_date').innerText = item.Date ? new Date(item.Date).toLocaleDateString('th-TH') : '-';
+      document.getElementById('d_time').innerText = item.Time || '-';
+      document.getElementById('d_location').innerText = item.Location || '-';
+
+      let namesUl = document.getElementById('d_names');
+      namesUl.innerHTML = '';
+      let namesArr = item.Name ? item.Name.split(',') : [];
+      namesArr.forEach(n => {
+        namesUl.innerHTML += `<li>${n.trim()}</li>`;
+      });
+
+      document.getElementById('d_btnEdit').onclick = function() {
+        closeModal('detailModal');
+        openTaskModal(item);
+      };
+
+      openModal('detailModal');
     }
 
     async function submitTaskForm(e) {
@@ -323,38 +493,42 @@
       const btn = document.getElementById('btnSubmitTask');
       btn.innerText = 'กำลังบันทึก...'; btn.disabled = true;
 
+      // ดึงรายชื่อคนที่ติ๊กเลือกทั้งหมด
+      let selectedNames = [];
+      document.querySelectorAll('input[name="task_person"]:checked').forEach(cb => {
+        selectedNames.push(cb.value);
+      });
+
+      if(selectedNames.length === 0) {
+        alert('กรุณาเลือกผู้ปฏิบัติงานอย่างน้อย 1 คน');
+        btn.innerText = 'บันทึก'; btn.disabled = false;
+        return;
+      }
+
       const payload = {
-        action: 'add_task',
+        action: document.getElementById('edit_task_id').value ? 'edit_task' : 'add_task',
+        ID: document.getElementById('edit_task_id').value || new Date().getTime(),
         Date: document.getElementById('f_date').value,
         Time: document.getElementById('f_time').value,
-        Name: document.getElementById('f_name').value,
+        Name: selectedNames.join(', '),
         Task: document.getElementById('f_task').value,
         Location: document.getElementById('f_location').value,
         Type: document.getElementById('f_type').value
       };
 
       await postData(payload);
-      document.getElementById('taskForm').reset();
       closeModal('taskModal');
-      fetchData(); 
-      btn.innerText = 'บันทึกข้อมูล'; btn.disabled = false;
+      await fetchData();
+      btn.innerText = 'บันทึก'; btn.disabled = false;
     }
 
-    async function submitPersonForm(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSubmitPerson');
-      btn.innerText = 'กำลังเพิ่ม...'; btn.disabled = true;
-
-      const payload = {
-        action: 'add_person',
-        Name: document.getElementById('p_name').value
-      };
-
-      await postData(payload);
-      document.getElementById('personForm').reset();
-      closeModal('personModal');
-      fetchData();
-      btn.innerText = 'เพิ่มชื่อ'; btn.disabled = false;
+    async function deleteCurrentTask() {
+      let id = document.getElementById('edit_task_id').value;
+      if(!confirm('ต้องการลบงานนี้ใช่หรือไม่?')) return;
+      await postData({ action: 'delete_task', ID: id });
+      closeModal('taskModal');
+      closeModal('detailModal');
+      await fetchData();
     }
 
     async function postData(payload) {
@@ -366,7 +540,7 @@
         });
       } catch (error) {
         console.error(error);
-        alert('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่');
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
       }
     }
   </script>
