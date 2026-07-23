@@ -1,642 +1,311 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8">
-  <title>ระบบจัดการตารางปฏิบัติงาน</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบปฏิทินและบันทึกงาน</title>
   
-  <!-- Libraries -->
+  <!-- Tailwind CSS สำหรับตกแต่ง UI -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
+  <!-- FullCalendar.js สำหรับปฏิทิน -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Prompt', sans-serif; background-color: #f1f5f9; color: #0f172a; }
-    .fc-event-title { font-size: 0.85em; white-space: normal; padding: 2px; }
-    .fc-day-today { background-color: #e0f2fe !important; }
-    .fc-button-primary { background-color: #1e293b !important; border-color: #1e293b !important; }
-    .fc-button-primary:hover { background-color: #334155 !important; border-color: #334155 !important; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 6px; }
-    ::-webkit-scrollbar-track { background-color: transparent; }
+    body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+    .fc-event { cursor: pointer; }
+    /* ซ่อน Scrollbar สำหรับความสวยงาม */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="pb-16">
+<body class="p-4 md:p-6 text-gray-800">
 
-  <!-- Navbar -->
-  <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-slate-800 text-white rounded-lg flex items-center justify-center font-bold text-xl">📅</div>
-        <h1 class="text-xl font-bold text-slate-800 tracking-tight">ระบบตารางปฏิบัติงาน</h1>
-      </div>
-      <div class="flex items-center gap-3 w-full md:w-auto">
-        <button onclick="openModal('personModal')" class="flex-1 md:flex-none bg-white hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium transition border border-slate-300 shadow-sm flex justify-center items-center gap-2">
-          ⚙️ จัดการคิว
-        </button>
-        <button onclick="openTaskModal()" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm shadow-blue-200 flex justify-center items-center gap-2">
-          ➕ บันทึกงานใหม่
-        </button>
-      </div>
-    </div>
-  </nav>
-
-  <div class="max-w-7xl mx-auto p-4 lg:p-8 space-y-6">
+  <div class="max-w-7xl mx-auto space-y-6">
     
-    <!-- Stats Row -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-        <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider">งานทั้งหมดปีนี้</p>
-        <h2 id="stat-total" class="text-3xl font-bold text-slate-800 mt-1">0</h2>
-      </div>
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-        <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider">งานใน (ปีนี้)</p>
-        <h2 id="stat-inside" class="text-3xl font-bold text-blue-600 mt-1">0</h2>
-      </div>
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-        <p class="text-slate-500 text-xs font-semibold uppercase tracking-wider">งานนอก (ปีนี้)</p>
-        <h2 id="stat-outside" class="text-3xl font-bold text-indigo-600 mt-1">0</h2>
-      </div>
-      <!-- ไฮไลท์การ์ดคิวต่อไป -->
-      <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-xl border border-slate-700 shadow-lg text-white relative overflow-hidden">
-        <div class="absolute -right-4 -top-4 w-24 h-24 bg-white opacity-5 rounded-full blur-xl"></div>
-        <p class="text-slate-300 text-xs font-medium uppercase tracking-wider flex items-center gap-1">
-          <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> คิวต่อไป (เตรียมออกงาน)
-        </p>
-        <h2 id="stat-next-person" class="text-xl md:text-2xl font-bold mt-2 truncate">-</h2>
-      </div>
-    </div>
-
-    <!-- Queue Table -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-        <div>
-          <h3 class="font-semibold text-slate-800 text-lg">📋 ตารางตรวจสอบลำดับคิว</h3>
-          <p class="text-xs text-slate-500 mt-0.5">*วนคิวอัตโนมัติจากบนลงล่างอ้างอิงจากงานล่าสุด</p>
-        </div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-max text-sm">
-          <thead>
-            <tr class="bg-white text-slate-500 font-medium text-xs uppercase tracking-wider border-b border-slate-200">
-              <th class="p-4 w-20">ลำดับ</th>
-              <th class="p-4">ชื่อบุคลากร</th>
-              <th class="p-4 text-center">รวม (งาน)</th>
-              <th class="p-4 text-center">งานใน</th>
-              <th class="p-4 text-center">งานนอก</th>
-              <th class="p-4">ออกงานล่าสุดเมื่อ</th>
-            </tr>
-          </thead>
-          <tbody id="personnel-stats-table" class="divide-y divide-slate-100">
-            <tr><td colspan="6" class="text-center p-8 text-slate-400">กำลังโหลดข้อมูล...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Calendar & Sidebar -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm">
-        <div id='calendar'></div>
-      </div>
-      <div class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[600px] md:h-[650px]">
-        <h3 class="font-semibold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4">🚀 ภารกิจเร็วๆ นี้</h3>
-        <div id="list-container" class="overflow-y-auto flex-1 space-y-3 pr-2">
-          <div class="text-center text-slate-400 mt-10 text-sm">กำลังโหลดข้อมูล...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal จัดการบุคลากร -->
-  <div id="personModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm transition-opacity">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 space-y-5 animate-[fadeIn_0.2s_ease-out]">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-800 text-lg">⚙️ จัดการลำดับคิว & บุคลากร</h3>
-        <button onclick="closeModal('personModal')" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition">&times;</button>
-      </div>
-      <form onsubmit="addNewPerson(event)" class="flex gap-2">
-        <input type="text" id="new_p_name" required placeholder="พิมพ์ชื่อ-นามสกุล..." class="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-        <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-medium transition shadow-sm">เพิ่มชื่อ</button>
-      </form>
+    <!-- Header -->
+    <div class="bg-white p-6 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
-        <p class="text-xs text-slate-500 mb-2 font-medium bg-blue-50 p-2 rounded text-blue-700 border border-blue-100">
-          💡 คลิกค้างที่รายชื่อแล้ว "ลากขึ้น-ลง" เพื่อสลับลำดับคิว
-        </p>
-        <div id="sortable-person-list" class="max-h-64 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50"></div>
+        <h1 class="text-2xl font-bold text-gray-800">📅 ปฏิทินปฏิบัติงาน</h1>
+        <p class="text-gray-500 text-sm mt-1">คลิกที่ชื่อบุคคลในรายการเพื่อดูประวัติการทำงาน</p>
       </div>
-      <div class="flex justify-end pt-2 border-t border-slate-100">
-        <button id="btnSaveOrder" onclick="savePersonnelOrder()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition shadow-sm">💾 บันทึกลำดับคิว</button>
-      </div>
+      <button onclick="fetchData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow transition">
+        🔄 รีเฟรชข้อมูล
+      </button>
     </div>
-  </div>
 
-  <!-- Modal บันทึกงาน -->
-  <div id="taskModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm transition-opacity">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 space-y-4 animate-[fadeIn_0.2s_ease-out]">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 id="taskModalTitle" class="font-bold text-slate-800 text-lg">📝 บันทึกภารกิจใหม่</h3>
-        <button onclick="closeModal('taskModal')" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition">&times;</button>
+    <!-- Layout หลัก (แบ่งซ้าย-ขวา) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- ฝั่งซ้าย: รายการงานที่จะถึง -->
+      <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm">
+        <h2 class="text-lg font-bold text-gray-700 border-b pb-3 mb-4">📋 งานที่กำลังจะมาถึง</h2>
+        <div id="dashboard-list" class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+          <div class="text-center text-gray-400 py-10">กำลังโหลดข้อมูล...</div>
+        </div>
+      </div>
+
+      <!-- ฝั่งขวา: ปฏิทิน FullCalendar -->
+      <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm relative z-0">
+        <div id="calendar"></div>
       </div>
       
-      <form id="taskForm" onsubmit="submitTaskForm(event)" class="space-y-4 text-sm">
-        <input type="hidden" id="edit_task_id">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-slate-700 font-medium mb-1.5">ตั้งแต่วันที่ <span class="text-red-500">*</span></label>
-            <input type="date" id="f_date" required class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-          </div>
-          <div>
-            <label class="block text-slate-700 font-medium mb-1.5">ถึงวันที่ <span class="text-slate-400 font-normal text-xs">(ปล่อยว่างได้)</span></label>
-            <input type="date" id="f_end_date" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-slate-700 font-medium mb-1.5">เวลา (เริ่ม - สิ้นสุด)</label>
-          <div class="flex items-center gap-2">
-            <input type="time" id="f_time_start" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            <span class="text-slate-400 font-medium">-</span>
-            <input type="time" id="f_time_end" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-slate-700 font-medium mb-1.5">เลือกผู้ปฏิบัติงาน <span class="text-red-500">*</span></label>
-          <div id="checkbox-person-list" class="max-h-40 overflow-y-auto border border-slate-300 rounded-lg p-3 space-y-2 bg-slate-50 shadow-inner grid grid-cols-1 md:grid-cols-2 gap-2"></div>
-        </div>
-
-        <div>
-          <label class="block text-slate-700 font-medium mb-1.5">ชื่องาน / ภารกิจ <span class="text-red-500">*</span></label>
-          <input type="text" id="f_task" required placeholder="ระบุรายละเอียดงาน..." class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-slate-700 font-medium mb-1.5">ประเภทงาน</label>
-            <select id="f_type" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition">
-              <option value="งานใน">🏢 งานใน</option>
-              <option value="งานนอก">🚗 งานนอก</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-slate-700 font-medium mb-1.5">สถานที่</label>
-            <input type="text" id="f_location" placeholder="ระบุสถานที่..." class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-          </div>
-        </div>
-        
-        <div class="pt-4 flex justify-between items-center border-t border-slate-100">
-          <button type="button" id="btnDeleteTask" onclick="deleteCurrentTask()" class="hidden text-red-500 hover:text-red-700 font-medium text-xs px-3 py-1.5 rounded-md hover:bg-red-50 transition">🗑️ ลบข้อมูล</button>
-          <div class="flex gap-2 ml-auto">
-            <button type="button" onclick="closeModal('taskModal')" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition">ยกเลิก</button>
-            <button type="submit" id="btnSubmitTask" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm shadow-blue-200 transition">บันทึกข้อมูล</button>
-          </div>
-        </div>
-      </form>
     </div>
   </div>
 
-  <!-- Modal รายละเอียด -->
-  <div id="detailModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm transition-opacity">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 space-y-4 text-sm animate-[fadeIn_0.2s_ease-out]">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">📌 รายละเอียดงาน</h3>
-        <button onclick="closeModal('detailModal')" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition">&times;</button>
+  <!-- Modal สำหรับแสดงประวัติของแต่ละบุคคล -->
+  <div id="historyModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="historyModalContent">
+      <div class="flex justify-between items-center p-5 border-b bg-gray-50">
+        <h3 class="text-xl font-bold text-gray-800">
+          👤 ประวัติการทำงาน: <span id="modalPersonName" class="text-blue-600"></span>
+        </h3>
+        <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-red-500 text-2xl leading-none">&times;</button>
       </div>
-      <div class="space-y-3 text-slate-700">
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
-          <h4 id="d_task" class="font-bold text-base text-slate-900 mb-1">-</h4>
-          <span id="d_type" class="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 mb-2">-</span>
-          <div class="grid grid-cols-2 gap-2 mt-1 text-xs">
-            <p>🗓️ <span id="d_date" class="font-medium">-</span></p>
-            <p>⏰ <span id="d_time" class="font-medium">-</span></p>
-            <p class="col-span-2">📍 <span id="d_location" class="font-medium">-</span></p>
-          </div>
-        </div>
-        <div>
-          <strong class="block mb-1.5 text-slate-800">👥 ผู้ปฏิบัติงาน:</strong>
-          <ul id="d_names" class="grid grid-cols-2 gap-1 text-xs bg-white p-2 rounded-lg border border-slate-200"></ul>
+      <div class="p-5 max-h-[60vh] overflow-y-auto">
+        <div id="historyLogContainer" class="space-y-4">
+          <!-- ข้อมูลประวัติจะถูกสร้างที่นี่ผ่าน JavaScript -->
         </div>
       </div>
-      <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
-        <button id="d_btnEdit" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-medium transition shadow-sm">✏️ แก้ไข</button>
-        <button onclick="closeModal('detailModal')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-medium transition shadow-sm">ปิด</button>
+      <div class="p-4 border-t bg-gray-50 text-right">
+        <button onclick="closeHistoryModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition">ปิด</button>
       </div>
     </div>
   </div>
 
-  <style>
-    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-  </style>
-
+  <!-- JavaScript หลัก -->
   <script>
-    // =========================================================
-    // TODO: นำ URL ของ Apps Script ที่ Deploy เสร็จแล้วมาใส่ในบรรทัดล่างนี้ 👇
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxE8VTVv_6sj-PMOMPKVjbqBvNydNQnKkNPjpo-yzt7zjFJHoBrsr8J7Doch4D2MUrh/exec';
-    // =========================================================
-    
-    let allData = [];
-    let personnelList = [];
     let calendar;
-    let sortableInstance = null;
-    const currentYear = new Date().getFullYear();
+    let allData = []; // เก็บข้อมูลทั้งหมดไว้ใช้ทำ History Log
 
-    const themeColors = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#f43f5e', '#6366f1', '#14b8a6', '#f97316'];
-    
+    // ฟังก์ชันสร้างสีสุ่มจากชื่อ (เพื่อให้สีแต่ละคนไม่เหมือนกันและจำง่าย)
     function getColorForName(name) {
+      if (!name) return '#3b82f6';
       let hash = 0;
-      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      return themeColors[Math.abs(hash) % themeColors.length];
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = Math.abs(hash) % 360;
+      return `hsl(${hue}, 70%, 50%)`;
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-      initCalendar();
-      fetchData();
-    });
+    // 🌟 ฟังก์ชันแก้ปัญหาวันที่เพี้ยน (บังคับแปลงกลับมาเป็น Local Date YYYY-MM-DD เป๊ะๆ)
+    function getSafeDateStr(dateValue) {
+      if (!dateValue) return '';
+      // กรณีข้อมูลเป็น ISO string (มี T หรือ Z) นำมาแปลงเป็น Local object ก่อน
+      let d = new Date(dateValue);
+      if (isNaN(d.getTime())) {
+        // Fallback กรณีข้อความดิบ
+        return dateValue.split('T')[0].split(' ')[0];
+      }
+      let y = d.getFullYear();
+      let m = String(d.getMonth() + 1).padStart(2, '0');
+      let day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
 
-    function initCalendar() {
-      var calendarEl = document.getElementById('calendar');
+    // ฟังก์ชันดึงข้อมูล (คุณสามารถแก้ไขชื่อฟังก์ชัน google.script.run ให้ตรงกับของคุณได้)
+    function fetchData() {
+      document.getElementById('dashboard-list').innerHTML = '<div class="text-center text-blue-500 py-10 font-medium">กำลังโหลดข้อมูล...</div>';
+      
+      // เรียกฟังก์ชันฝั่ง Apps Script (เปลี่ยน "getDataFromSheet" เป็นชื่อฟังก์ชันของคุณถ้าไม่ตรงกัน)
+      if (typeof google !== 'undefined' && google.script) {
+        google.script.run.withSuccessHandler(renderApp).getDataFromSheet(); 
+      } else {
+        console.warn('ไม่ได้รันบน Google Apps Script');
+      }
+    }
+
+    // ฟังก์ชันหลักสำหรับวาด UI
+    function renderApp(data) {
+      allData = data; // เก็บลงตัวแปร Global ไว้กรอง History
+      let eventsForCalendar = [];
+      let todayStr = getSafeDateStr(new Date());
+
+      // เคลียร์กระดานแดชบอร์ด
+      const dashboard = document.getElementById('dashboard-list');
+      dashboard.innerHTML = '';
+
+      // กรองและเรียงลำดับข้อมูลสำหรับแสดงใน Dashboard (เอาเฉพาะงานในอนาคต/วันนี้)
+      let upcomingTasks = allData.filter(item => {
+        let endD = item.EndDate ? getSafeDateStr(item.EndDate) : getSafeDateStr(item.Date);
+        return endD >= todayStr;
+      });
+
+      upcomingTasks.sort((a, b) => getSafeDateStr(a.Date).localeCompare(getSafeDateStr(b.Date)));
+
+      // 1. วาดการ์ดแดชบอร์ด
+      if (upcomingTasks.length === 0) {
+        dashboard.innerHTML = '<div class="text-center text-gray-400 py-10">ไม่มีงานใหม่ในระยะนี้</div>';
+      } else {
+        upcomingTasks.forEach(item => {
+          let dateStr = getSafeDateStr(item.Date);
+          let endStr = item.EndDate ? getSafeDateStr(item.EndDate) : dateStr;
+          let dateDisplay = dateStr === endStr ? dateStr : `${dateStr} ถึง ${endStr}`;
+          let color = getColorForName(item.Name);
+
+          let card = document.createElement('div');
+          card.className = "p-4 border border-l-4 rounded-lg bg-gray-50 shadow-sm hover:shadow-md transition-shadow";
+          card.style.borderLeftColor = color;
+          card.innerHTML = `
+            <div class="text-xs text-gray-500 mb-1 flex items-center justify-between">
+              <span>📅 ${dateDisplay} ${item.Time ? `| ⏰ ${item.Time}` : ''}</span>
+            </div>
+            <div class="font-bold text-gray-800 text-md mb-1">${item.Task}</div>
+            <div class="flex items-center text-sm">
+              <span class="mr-2">👤</span> 
+              <!-- 🌟 จุดคลิกเพื่อดูประวัติ -->
+              <span class="font-medium cursor-pointer hover:underline text-blue-600 transition" 
+                    onclick="openHistoryModal('${item.Name}')">${item.Name}</span>
+            </div>
+          `;
+          dashboard.appendChild(card);
+        });
+      }
+
+      // 2. เตรียมข้อมูลสำหรับ FullCalendar
+      allData.forEach(item => {
+        let startSafe = getSafeDateStr(item.Date);
+        let endSafeBase = item.EndDate ? getSafeDateStr(item.EndDate) : startSafe;
+        let isPast = endSafeBase < todayStr;
+        let color = isPast ? '#94a3b8' : getColorForName(item.Name);
+
+        // จัดการเวลา
+        let startTime = '';
+        if (item.Time && item.Time.includes('-')) {
+           startTime = item.Time.split('-')[0].trim();
+        } else if (item.Time) {
+           startTime = item.Time.trim();
+        }
+
+        let eventObj = {
+          title: `${item.Name} - ${item.Task}`,
+          backgroundColor: color,
+          borderColor: color,
+          allDay: !startTime,
+          extendedProps: { ...item }
+        };
+
+        if (startTime) {
+          // มีการระบุเวลา
+          eventObj.start = `${startSafe}T${startTime}:00`;
+        } else {
+          // 🌟 All-day event (ใช้ Format YYYY-MM-DD แบบเพียวๆ จะไม่โดน Timezone shift เลย)
+          eventObj.start = startSafe;
+          
+          // กฎของ FullCalendar: End Date ของ All-Day Event ต้องบวก 1 วันเสมอ
+          let [y, m, d] = endSafeBase.split('-').map(Number);
+          let endD = new Date(y, m - 1, d + 1); // บวก 1 วัน
+          eventObj.end = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
+        }
+        
+        eventsForCalendar.push(eventObj);
+      });
+
+      // 3. เรนเดอร์ปฏิทิน
+      renderCalendar(eventsForCalendar);
+    }
+
+    // ฟังก์ชันวาด FullCalendar
+    function renderCalendar(eventsList) {
+      let calendarEl = document.getElementById('calendar');
+      
+      // ล้างปฏิทินเก่าถ้ามี
+      if (calendar) { calendar.destroy(); }
+
       calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        locale: 'th',
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
+        locale: 'th', // ใช้ภาษาไทย
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,listMonth'
+        },
+        buttonText: { today: 'วันนี้', month: 'เดือน', week: 'สัปดาห์', list: 'รายการ' },
+        events: eventsList,
         height: 600,
-        buttonText: { today: 'วันนี้', month: 'เดือน', list: 'รายการ' },
-        eventClick: function(info) { showDetailModal(info.event.extendedProps.taskData); }
+        eventClick: function(info) {
+          // เมื่อคลิกเหตุการณ์ในปฏิทิน ให้เปิดประวัติของคนๆ นั้นเลย
+          let pName = info.event.extendedProps.Name;
+          if (pName) openHistoryModal(pName);
+        }
       });
       calendar.render();
     }
 
-    function openModal(id) { 
-      document.getElementById(id).style.display = 'flex'; 
-      if(id === 'personModal') renderSortablePersonnel();
-    }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    // 🌟 ระบบ History Log ของบุคคล
+    function openHistoryModal(personName) {
+      document.getElementById('modalPersonName').innerText = personName;
+      const logContainer = document.getElementById('historyLogContainer');
+      logContainer.innerHTML = '';
 
-    async function fetchData() {
-      try {
-        const response = await fetch(API_URL);
-        const data = await response.json();
-        allData = data.tasks || [];
-        personnelList = data.personnel || [];
-        updateDashboard();
-        renderPersonnelCheckboxes();
-      } catch (error) {
-        console.error("Fetch Error:", error);
-        document.getElementById('list-container').innerHTML = `<div class="text-red-500 text-center p-4 bg-red-50 rounded-lg border border-red-200">❌ โหลดข้อมูลล้มเหลว โปรดตรวจสอบ URL ของ Apps Script</div>`;
-      }
-    }
-
-    function renderPersonnelCheckboxes() {
-      const container = document.getElementById('checkbox-person-list');
-      if (personnelList.length === 0) {
-        container.innerHTML = '<div class="col-span-2 text-xs text-slate-400 text-center py-2">ไม่พบรายชื่อบุคลากร (กรุณาไปเพิ่มที่ปุ่มจัดการคิว)</div>';
-        return;
-      }
-      container.innerHTML = '';
-      personnelList.forEach(name => {
-        container.innerHTML += `
-          <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-100 p-2 rounded border border-transparent hover:border-slate-200 transition">
-            <input type="checkbox" name="task_person" value="${name}" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-            <span class="truncate">${name}</span>
-          </label>
-        `;
-      });
-    }
-
-    function renderSortablePersonnel() {
-      const container = document.getElementById('sortable-person-list');
-      container.innerHTML = '';
-      personnelList.forEach((name, idx) => {
-        container.innerHTML += `
-          <div data-name="${name}" class="flex justify-between items-center p-3 bg-white text-sm cursor-grab active:cursor-grabbing hover:bg-blue-50 group border-l-4 border-transparent hover:border-blue-500 transition">
-            <div class="flex items-center gap-3">
-              <span class="text-slate-300 group-hover:text-blue-400">⣿</span>
-              <span class="font-medium text-slate-800">
-                <span class="text-slate-400 text-xs w-6 inline-block">#${idx+1}</span> ${name}
-              </span>
-            </div>
-            <button type="button" onclick="deletePerson('${name}')" class="text-slate-300 hover:text-red-600 px-2 py-1 rounded bg-slate-50 hover:bg-red-50 transition">ลบ</button>
-          </div>
-        `;
-      });
-
-      if(sortableInstance) sortableInstance.destroy();
-      sortableInstance = new Sortable(container, { animation: 150, ghostClass: 'bg-blue-100' });
-    }
-
-    async function savePersonnelOrder() {
-      const items = document.querySelectorAll('#sortable-person-list > div');
-      let newOrder = [];
-      items.forEach(el => newOrder.push(el.getAttribute('data-name')));
-      const btn = document.getElementById('btnSaveOrder');
-      btn.innerHTML = '⏳ กำลังบันทึก...'; btn.disabled = true;
-      await postData({ action: 'update_personnel', personnel: newOrder });
-      personnelList = newOrder;
-      closeModal('personModal');
-      updateDashboard();
-      btn.innerHTML = '💾 บันทึกลำดับคิว'; btn.disabled = false;
-    }
-
-    async function addNewPerson(e) {
-      e.preventDefault();
-      const input = document.getElementById('new_p_name');
-      const name = input.value.trim();
-      if(!name) return;
-      input.disabled = true;
-      await postData({ action: 'add_person', Name: name });
-      input.value = ''; input.disabled = false;
-      await fetchData();
-      renderSortablePersonnel();
-    }
-
-    async function deletePerson(name) {
-      if(!confirm(`⚠️ ยืนยันการลบรายชื่อ: ${name} ออกจากระบบ?`)) return;
-      await postData({ action: 'delete_person', Name: name });
-      await fetchData();
-      renderSortablePersonnel();
-    }
-
-      function updateDashboard() {
-      let total = 0, inside = 0, outside = 0;
-      let events = [], listHTML = '';
-      let pStats = {};
+      // กรองงานที่เป็นของคนนี้
+      let personLogs = allData.filter(item => item.Name === personName);
       
-      personnelList.forEach(name => {
-        pStats[name] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
-      });
+      // เรียงจากวันที่ล่าสุดลงไปหาเก่าสุด
+      personLogs.sort((a, b) => getSafeDateStr(b.Date).localeCompare(getSafeDateStr(a.Date)));
 
-      allData.sort((a, b) => {
-        let dateA = a.Date ? a.Date.split('T')[0] : '';
-        let dateB = b.Date ? b.Date.split('T')[0] : '';
-        return dateA.localeCompare(dateB);
-      });
-      
-      // ประกาศตัวแปร todayStr แค่ครั้งเดียวตรงนี้
-      let todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-      
-      let latestTaskTime = 0;
-      let lastPeopleAssigned = []; 
-
-      allData.forEach(item => {
-        if(item.Date && item.Name) {
-          let itemDateObj = new Date(item.Date);
-          let itemTimeVal = itemDateObj.getTime();
-          let namesArr = item.Name.split(',').map(n => n.trim());
-
-          if (itemDateObj.getFullYear() === currentYear) {
-            total++;
-            if(item.Type === 'งานใน') inside++;
-            if(item.Type === 'งานนอก') outside++;
-
-            namesArr.forEach(pName => {
-              if(pStats[pName]) {
-                pStats[pName].total++;
-                if(item.Type === 'งานใน') pStats[pName].inside++;
-                if(item.Type === 'งานนอก') pStats[pName].outside++;
-                if(itemTimeVal >= pStats[pName].lastDate) {
-                  pStats[pName].lastDate = itemTimeVal;
-                  pStats[pName].lastDateStr = itemDateObj.toLocaleDateString('th-TH');
-                }
-              }
-            });
-          }
-
-          if(itemTimeVal >= latestTaskTime) {
-            latestTaskTime = itemTimeVal;
-            lastPeopleAssigned = namesArr; 
-          }
-          // ตัดสตริงวันที่ให้อยู่ในรูป YYYY-MM-DD เสมอ
-          let startDateStr = item.Date.split('T')[0];
-          let endDateStrBase = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
-          
-          let isPast = endDateStrBase < todayStr;
-          let color = isPast ? '#94a3b8' : getColorForName(item.Name); 
-
-          // แยกเวลาเริ่มต้น (ถ้ามี)
-          let startTime = '';
-          if (item.Time && item.Time.includes('-')) {
-             startTime = item.Time.split('-')[0].trim();
-          } else if (item.Time) {
-             startTime = item.Time.trim();
-          }
-
-          // **วิธีแก้ที่ถูกต้อง:** เติมเครื่องหมายบอก Timezone (+07:00) เข้าไปท้ายสตริง 
-          // เพื่อให้ JavaScript และ FullCalendar รู้ว่าเป็นเวลาของประเทศไทยเป๊ะๆ ไม่ถูกดึงถอยหลัง
-          let calendarStart = startTime ? `${startDateStr}T${startTime}:00+07:00` : `${startDateStr}T00:00:00+07:00`;
-          
-          // คำนวณวันสิ้นสุด (บวกเพิ่ม 1 วัน สำหรับ All-day event ให้ FullCalendar แสดงผลครอบคลุมช่อง)
-          let [ey, em, ed] = endDateStrBase.split('-').map(Number);
-          let endObj = new Date(ey, em - 1, ed + 1);
-          let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
-          let calendarEnd = `${endCalStr}T00:00:00+07:00`;
-
-          events.push({
-            title: `${item.Name} - ${item.Task}`,
-            start: calendarStart,
-            end: calendarEnd,
-            backgroundColor: color, 
-            borderColor: color,
-            allDay: !startTime, 
-            extendedProps: { taskData: item }
-          });
-
-          let [sy, sm, sd] = startDateStr.split('-').map(Number);
-          let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
-          let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
-          
-          let dateDisplay = startDateStr !== endDateStrBase ? `${startLocal} - ${endLocal}` : startLocal;
-
-          listHTML = `
-            <div onclick='showDetailModal(${JSON.stringify(item)})' class="p-3 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl shadow-sm cursor-pointer transition mb-2 group">
-              <div class="flex justify-between items-start">
-                <p class="font-semibold text-sm text-slate-800 group-hover:text-blue-700 transition">${item.Name}</p>
-                <span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${isPast ? 'bg-slate-100 text-slate-500' : (item.Type==='งานนอก' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700')}">${item.Type} ${isPast ? '(ผ่านไปแล้ว)' : ''}</span>
-              </div>
-              <p class="text-xs text-slate-600 mt-1.5 truncate">📌 ${item.Task}</p>
-              <div class="flex gap-3 text-[11px] text-slate-400 mt-2 font-medium">
-                <span>🗓️ ${dateDisplay}</span>
-                <span>⏰ ${item.Time || '-'}</span>
-              </div>
-            </div>
-          ` + listHTML;
-        }
-      });
-
-      let nextPerson = '-';
-      if (personnelList.length > 0) {
-        if (lastPeopleAssigned.length === 0) {
-          nextPerson = personnelList[0];
-        } else {
-          let highestIndex = -1;
-          lastPeopleAssigned.forEach(pName => {
-             let idx = personnelList.indexOf(pName);
-             if (idx > highestIndex) highestIndex = idx;
-          });
-
-          if(highestIndex === -1) {
-            nextPerson = personnelList[0];
-          } else {
-            let nextIndex = (highestIndex + 1) % personnelList.length;
-            nextPerson = personnelList[nextIndex];
-          }
-        }
-      }
-
-      let tableHTML = '';
-      personnelList.forEach((name, idx) => {
-        let stat = pStats[name] || { total: 0, inside: 0, outside: 0, lastDateStr: '-' };
-        let isNext = (name === nextPerson); 
-        
-        tableHTML += `
-          <tr class="hover:bg-slate-50 transition ${isNext ? 'bg-blue-50/50 relative' : ''}">
-            <td class="p-4 text-slate-400 font-mono text-xs">
-               ${isNext ? '<span class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></span>' : ''}
-               #${idx + 1}
-            </td>
-            <td class="p-4 font-semibold ${isNext ? 'text-blue-700' : 'text-slate-800'}">
-              ${name} ${isNext ? '<span class="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase tracking-wide border border-green-200">คิวถัดไป</span>' : ''}
-            </td>
-            <td class="p-4 text-center font-bold text-slate-800">${stat.total}</td>
-            <td class="p-4 text-center text-slate-500">${stat.inside}</td>
-            <td class="p-4 text-center text-slate-500">${stat.outside}</td>
-            <td class="p-4 text-xs ${stat.lastDateStr === '-' ? 'text-slate-300' : 'text-slate-600'} font-medium">${stat.lastDateStr}</td>
-          </tr>
-        `;
-      });
-
-      if(personnelList.length === 0) tableHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-400">ยังไม่มีรายชื่อในระบบ</td></tr>`;
-
-      document.getElementById('personnel-stats-table').innerHTML = tableHTML;
-      document.getElementById('stat-total').innerText = total;
-      document.getElementById('stat-inside').innerText = inside;
-      document.getElementById('stat-outside').innerText = outside;
-      document.getElementById('stat-next-person').innerText = nextPerson;
-      document.getElementById('list-container').innerHTML = listHTML || '<div class="text-slate-400 text-center text-sm mt-10">ยังไม่มีข้อมูลภารกิจ</div>';
-
-      calendar.removeAllEvents();
-      calendar.addEventSource(events);
-    }
-
-    function openTaskModal(itemToEdit = null) {
-      renderPersonnelCheckboxes();
-      document.getElementById('taskForm').reset();
-      
-      if(itemToEdit) {
-        document.getElementById('taskModalTitle').innerHTML = '✏️ แก้ไขข้อมูลภารกิจ';
-        document.getElementById('edit_task_id').value = itemToEdit.ID || '';
-        document.getElementById('f_date').value = itemToEdit.Date ? itemToEdit.Date.split('T')[0] : '';
-        document.getElementById('f_end_date').value = itemToEdit.EndDate ? itemToEdit.EndDate.split('T')[0] : '';
-        let timeParts = itemToEdit.Time ? itemToEdit.Time.split('-') : [];
-        document.getElementById('f_time_start').value = timeParts[0] ? timeParts[0].trim() : '';
-        document.getElementById('f_time_end').value = timeParts[1] ? timeParts[1].trim() : '';
-        document.getElementById('f_task').value = itemToEdit.Task || '';
-        document.getElementById('f_location').value = itemToEdit.Location || '';
-        document.getElementById('f_type').value = itemToEdit.Type || 'งานใน';
-        document.getElementById('btnDeleteTask').classList.remove('hidden');
-
-        let assignedNames = itemToEdit.Name ? itemToEdit.Name.split(',').map(n => n.trim()) : [];
-        document.querySelectorAll('input[name="task_person"]').forEach(cb => {
-          if(assignedNames.includes(cb.value)) cb.checked = true;
-        });
+      if (personLogs.length === 0) {
+        logContainer.innerHTML = '<div class="text-center text-gray-500 py-4">ไม่พบประวัติการทำงาน</div>';
       } else {
-        document.getElementById('taskModalTitle').innerHTML = '➕ บันทึกภารกิจใหม่';
-        document.getElementById('edit_task_id').value = '';
-        document.getElementById('btnDeleteTask').classList.add('hidden');
-        document.getElementById('f_time_start').value = '';
-        document.getElementById('f_time_end').value = '';
-      }
-      openModal('taskModal');
-    }
+        // วาดรายการประวัติทีละอัน
+        personLogs.forEach(log => {
+          let startDate = getSafeDateStr(log.Date);
+          let todayStr = getSafeDateStr(new Date());
+          
+          // เช็คสถานะว่าผ่านมาแล้วหรือยัง
+          let statusBadge = startDate < todayStr 
+            ? `<span class="px-2 py-1 bg-gray-200 text-gray-600 text-xs rounded-full">เสร็จสิ้น/ผ่านมาแล้ว</span>`
+            : `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">กำลังจะมาถึง</span>`;
 
-      function showDetailModal(item) {
-      document.getElementById('d_task').innerText = item.Task || '-';
-      document.getElementById('d_type').innerText = item.Type || '-';
-      
-      // จัดการวันที่แบบไม่เพี้ยน Timezone
-      let startDateStr = item.Date.split('T')[0];
-      let endDateStrBase = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
-      
-      let [sy, sm, sd] = startDateStr.split('-').map(Number);
-      let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
-      let [ey, em, ed] = endDateStrBase.split('-').map(Number);
-      let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
-      
-      let dateDisplay = startDateStr !== endDateStrBase ? `${startLocal} - ${endLocal}` : startLocal;
-
-      document.getElementById('d_date').innerText = dateDisplay;
-      document.getElementById('d_time').innerText = item.Time || '-';
-      document.getElementById('d_location').innerText = item.Location || '-';
-
-      let namesUl = document.getElementById('d_names');
-      namesUl.innerHTML = '';
-      let namesArr = item.Name ? item.Name.split(',') : [];
-      namesArr.forEach(n => { namesUl.innerHTML += `<li class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> ${n.trim()}</li>`; });
-
-      document.getElementById('d_btnEdit').onclick = function() {
-        closeModal('detailModal');
-        openTaskModal(item);
-      };
-
-      openModal('detailModal');
-    }
-
-    async function submitTaskForm(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSubmitTask');
-      btn.innerHTML = '⏳ กำลังบันทึก...'; btn.disabled = true;
-
-      let selectedNames = [];
-      document.querySelectorAll('input[name="task_person"]:checked').forEach(cb => {
-        selectedNames.push(cb.value);
-      });
-
-      if(selectedNames.length === 0) {
-        alert('กรุณาเลือกผู้ปฏิบัติงานอย่างน้อย 1 คน');
-        btn.innerHTML = 'บันทึกข้อมูล'; btn.disabled = false;
-        return;
-      }
-
-      const payload = {
-        action: document.getElementById('edit_task_id').value ? 'edit_task' : 'add_task',
-        ID: document.getElementById('edit_task_id').value || new Date().getTime(),
-        Date: document.getElementById('f_date').value,
-        EndDate: document.getElementById('f_end_date').value || document.getElementById('f_date').value,
-        Time: (document.getElementById('f_time_start').value || '') + (document.getElementById('f_time_end').value ? '-' + document.getElementById('f_time_end').value : ''),
-        Name: selectedNames.join(', '),
-        Task: document.getElementById('f_task').value,
-        Location: document.getElementById('f_location').value,
-        Type: document.getElementById('f_type').value
-      };
-
-      await postData(payload);
-      closeModal('taskModal');
-      await fetchData();
-      btn.innerHTML = 'บันทึกข้อมูล'; btn.disabled = false;
-    }
-
-    async function deleteCurrentTask() {
-      let id = document.getElementById('edit_task_id').value;
-      if(!confirm('⚠️ คุณแน่ใจหรือไม่ที่จะลบงานนี้? ข้อมูลจะไม่สามารถกู้คืนได้')) return;
-      await postData({ action: 'delete_task', ID: id });
-      closeModal('taskModal');
-      closeModal('detailModal');
-      await fetchData();
-    }
-
-    async function postData(payload) {
-      try {
-        await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
+          let div = document.createElement('div');
+          div.className = "flex flex-col md:flex-row md:items-start justify-between p-4 border rounded-lg bg-white shadow-sm hover:border-blue-300 transition";
+          div.innerHTML = `
+            <div>
+              <div class="font-bold text-gray-800 text-lg mb-1">${log.Task}</div>
+              <div class="text-sm text-gray-600 space-y-1">
+                <div>📅 วันที่: <span class="font-medium">${startDate}</span> ${log.EndDate ? `- ${getSafeDateStr(log.EndDate)}` : ''}</div>
+                ${log.Time ? `<div>⏰ เวลา: ${log.Time}</div>` : ''}
+                ${log.Location ? `<div>📍 สถานที่: ${log.Location}</div>` : ''}
+              </div>
+            </div>
+            <div class="mt-3 md:mt-0 md:text-right flex flex-col justify-between h-full">
+              ${statusBadge}
+            </div>
+          `;
+          logContainer.appendChild(div);
         });
-      } catch (error) {
-        console.error(error);
-        alert('เกิดข้อผิดพลาดในการส่งข้อมูล โปรดตรวจสอบอินเทอร์เน็ตหรือ URL');
       }
+
+      // แสดง Modal พร้อม Animation
+      const modal = document.getElementById('historyModal');
+      const modalBox = document.getElementById('historyModalContent');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modalBox.classList.remove('scale-95');
+      }, 10);
     }
+
+    function closeHistoryModal() {
+      const modal = document.getElementById('historyModal');
+      const modalBox = document.getElementById('historyModalContent');
+      
+      // Animation ปิด
+      modal.classList.add('opacity-0');
+      modalBox.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
+    window.onload = function() {
+      fetchData();
+    };
   </script>
+
 </body>
 </html>
