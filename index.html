@@ -369,7 +369,8 @@
       });
 
       allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
-      let todayStr = new Date().toISOString().split('T')[0];
+      let dToday = new Date();
+      let todayStr = `${dToday.getFullYear()}-${String(dToday.getMonth() + 1).padStart(2, '0')}-${String(dToday.getDate()).padStart(2, '0')}`;
       
       let latestTaskTime = 0;
       let lastPeopleAssigned = []; // เก็บชื่อคนที่ถูก assign ในงานล่าสุด
@@ -405,25 +406,32 @@
             lastPeopleAssigned = namesArr; // อัปเดตกลุ่มคนที่ไปงานล่าสุด
           }
 
-          // จัดการแสดงผลลงปฏิทิน
-          let isPast = item.EndDate ? (item.EndDate < todayStr) : (item.Date < todayStr);
+          // จัดการแสดงผลลงปฏิทิน (อ่านวันที่ตรงๆ ไม่ผ่าน Timezone)
+          let startDateStr = item.Date.split('T')[0];
+          let endDateStr = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
+          
+          let isPast = endDateStr < todayStr;
           let color = isPast ? '#94a3b8' : (item.Type === 'งานนอก' ? '#4f46e5' : '#0ea5e9'); // Slate, Indigo, Sky
-          let endDate = item.EndDate ? new Date(item.EndDate) : new Date(item.Date);
-          if(item.EndDate) endDate.setDate(endDate.getDate() + 1);
+          
+          // FullCalendar ต้องการ End Date บวกเพิ่ม 1 วัน
+          let [ey, em, ed] = endDateStr.split('-').map(Number);
+          let endObj = new Date(ey, em - 1, ed + 1);
+          let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
 
           events.push({
-  title: `${item.Name} - ${item.Task}`, // ✏️ แก้ตรงนี้ถ้าอยากให้แสดงข้อความแบบอื่นบนแถบปฏิทิน
-  start: itemDateObj.toISOString().split('T')[0],
-  end: endDate.toISOString().split('T')[0],
-  backgroundColor: color, 
-  borderColor: color,
-  extendedProps: { taskData: item }
-});
+            title: `${item.Name} - ${item.Task}`,
+            start: startDateStr,
+            end: endCalStr,
+            backgroundColor: color, borderColor: color,
+            extendedProps: { taskData: item }
+          });
 
-          // จัดการลิสต์ข้างๆ ปฏิทิน (เรียงใหม่สุดอยู่บน)
-          let dateDisplay = item.EndDate && item.EndDate !== item.Date 
-            ? `${itemDateObj.toLocaleDateString('th-TH')} - ${new Date(item.EndDate).toLocaleDateString('th-TH')}` 
-            : itemDateObj.toLocaleDateString('th-TH');
+          // จัดการลิสต์ข้างๆ ปฏิทิน
+          let [sy, sm, sd] = startDateStr.split('-').map(Number);
+          let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
+          let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
+          
+          let dateDisplay = startDateStr !== endDateStr ? `${startLocal} - ${endLocal}` : startLocal;
 
           listHTML = `
             <div onclick='showDetailModal(${JSON.stringify(item)})' class="p-3 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl shadow-sm cursor-pointer transition mb-2 group">
@@ -534,9 +542,14 @@
       document.getElementById('d_task').innerText = item.Task || '-';
       document.getElementById('d_type').innerText = item.Type || '-';
       
-      let dateDisplay = item.EndDate && item.EndDate !== item.Date 
-        ? `${new Date(item.Date).toLocaleDateString('th-TH')} - ${new Date(item.EndDate).toLocaleDateString('th-TH')}` 
-        : new Date(item.Date).toLocaleDateString('th-TH');
+      let startDateStr = item.Date.split('T')[0];
+      let endDateStr = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
+      let [sy, sm, sd] = startDateStr.split('-').map(Number);
+      let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
+      let [ey, em, ed] = endDateStr.split('-').map(Number);
+      let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
+      
+      let dateDisplay = startDateStr !== endDateStr ? `${startLocal} - ${endLocal}` : startLocal;
 
       document.getElementById('d_date').innerText = dateDisplay;
       document.getElementById('d_time').innerText = item.Time || '-';
