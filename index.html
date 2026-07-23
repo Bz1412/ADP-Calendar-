@@ -94,6 +94,7 @@
               <th class="p-4 text-center">รวม (งาน)</th>
               <th class="p-4 text-center">งานใน</th>
               <th class="p-4 text-center">งานนอก</th>
+              <th class="p-4 text-center text-emerald-600">ประจำวัน</th>
               <th class="p-4">ออกงานล่าสุดเมื่อ</th>
             </tr>
           </thead>
@@ -277,21 +278,27 @@
     });
 
     function initCalendar() {
-  var calendarEl = document.getElementById('calendar');
-  calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth', // ✏️ แก้ตรงนี้ถ้าอยากให้เริ่มมาเป็นมุมมองอื่น เช่น 'timeGridWeek' (รายสัปดาห์) หรือ 'listMonth'
-    locale: 'th', // ✏️ ภาษา
-    headerToolbar: { 
-      left: 'prev,next today', 
-      center: 'title', 
-      right: 'dayGridMonth,listWeek' // ✏️ แก้เมนูปุ่มกดด้านขวาบนได้ที่นี่
-    },
-    height: 600, // ✏️ ปรับความสูงของปฏิทิน
-    buttonText: { today: 'วันนี้', month: 'เดือน', list: 'รายการ' },
-    eventClick: function(info) { showDetailModal(info.event.extendedProps.taskData); } // ✏️ การกระทำเมื่อคลิกที่งานในปฏิทิน
-  });
-  calendar.render();
-}
+      var calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'th',
+        headerToolbar: { 
+          left: 'prev,next today', 
+          center: 'title', 
+          right: 'dayGridMonth,listWeek'
+        },
+        height: 600,
+        buttonText: { today: 'วันนี้', month: 'เดือน', list: 'รายการ' },
+        // 🌟 บังคับเวลาเป็นแบบ 24 ชม. ตลอด (ทั้งในปฏิทินและมุมมอง List)
+        eventTimeFormat: { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: false 
+        },
+        eventClick: function(info) { showDetailModal(info.event.extendedProps.taskData); }
+      });
+      calendar.render();
+    }
 
     function openModal(id) { 
       document.getElementById(id).style.display = 'flex'; 
@@ -388,16 +395,20 @@
       let events = [], listHTML = '';
       let pStats = {};
       
+      // กำหนดค่าเริ่มต้นให้กับทุกคนในระบบ (เพิ่ม daily: 0)
       personnelList.forEach(name => {
-        pStats[name] = { total: 0, inside: 0, outside: 0, lastDate: 0, lastDateStr: '-' };
+        pStats[name] = { total: 0, inside: 0, outside: 0, daily: 0, lastDate: 0, lastDateStr: '-' };
       });
 
+      // เรียงข้อมูลจากเก่าไปใหม่ เพื่อให้ลอจิกการหาคิวล่าสุดทำงานได้ถูกต้อง
       allData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+      
       let dToday = new Date();
       let todayStr = `${dToday.getFullYear()}-${String(dToday.getMonth() + 1).padStart(2, '0')}-${String(dToday.getDate()).padStart(2, '0')}`;
+      let currentYear = dToday.getFullYear();
       
       let latestTaskTime = 0;
-      let lastPeopleAssigned = []; // เก็บชื่อคนที่ถูก assign ในงานล่าสุด
+      let lastPeopleAssigned = []; // เก็บชื่อคนที่ถูก assign ในงานล่าสุด (ที่ไม่ใช่งานประจำวัน)
 
       allData.forEach(item => {
         if(item.Date && item.Name) {
@@ -405,19 +416,29 @@
           let itemTimeVal = itemDateObj.getTime();
           let namesArr = item.Name.split(',').map(n => n.trim());
 
-          if (itemDateObj.getFullYear() === currentYear && item.Type !== 'งานประจำวัน') {
-            total++;
-            if(item.Type === 'งานใน') inside++;
-            if(item.Type === 'งานนอก') outside++;
+          // เช็คสถิติเฉพาะปีนี้
+          if (itemDateObj.getFullYear() === currentYear) {
+            // นับสถิติภาพรวมด้านบน (ไม่รวมงานประจำวัน)
+            if (item.Type !== 'งานประจำวัน') {
+              total++;
+              if(item.Type === 'งานใน') inside++;
+              if(item.Type === 'งานนอก') outside++;
+            }
 
             namesArr.forEach(pName => {
               if(pStats[pName]) {
-                pStats[pName].total++;
-                if(item.Type === 'งานใน') pStats[pName].inside++;
-                if(item.Type === 'งานนอก') pStats[pName].outside++;
-                if(itemTimeVal >= pStats[pName].lastDate) {
-                  pStats[pName].lastDate = itemTimeVal;
-                  pStats[pName].lastDateStr = itemDateObj.toLocaleDateString('th-TH');
+                if (item.Type === 'งานประจำวัน') {
+                  // ถ้างเป็นงานประจำวัน ให้นับแยกต่างหาก และไม่ส่งผลต่อวันที่ออกงานล่าสุด
+                  pStats[pName].daily++;
+                } else {
+                  // นับยอดงานรวม/ใน/นอก และอัปเดตคิวปกติ
+                  pStats[pName].total++;
+                  if(item.Type === 'งานใน') pStats[pName].inside++;
+                  if(item.Type === 'งานนอก') pStats[pName].outside++;
+                  if(itemTimeVal >= pStats[pName].lastDate) {
+                    pStats[pName].lastDate = itemTimeVal;
+                    pStats[pName].lastDateStr = itemDateObj.toLocaleDateString('th-TH');
+                  }
                 }
               }
             });
@@ -429,20 +450,16 @@
             lastPeopleAssigned = namesArr; 
           }
 
-          // หางานล่าสุดที่ถูกสร้าง/ออกไป (ไม่สนว่าปีไหน เพื่อหาคิวต่อไป)
-          if(itemTimeVal >= latestTaskTime) {
-            latestTaskTime = itemTimeVal;
-            lastPeopleAssigned = namesArr; // อัปเดตกลุ่มคนที่ไปงานล่าสุด
-          }
-
+          // ==========================================
           // จัดการแสดงผลลงปฏิทิน (อ่านวันที่ตรงๆ ไม่ผ่าน Timezone)
+          // ==========================================
           let startDateStr = item.Date.split('T')[0];
           let endDateStr = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
           
           let isPast = endDateStr < todayStr;
-          let color = isPast ? '#94a3b8' : (item.Type === 'งานนอก' ? '#4f46e5' : (item.Type === 'งานประจำวัน' ? '#10b981' : '#0ea5e9')); // เพิ่ม Emerald สำหรับงานประจำวัน
+          let color = isPast ? '#94a3b8' : (item.Type === 'งานนอก' ? '#4f46e5' : (item.Type === 'งานประจำวัน' ? '#10b981' : '#0ea5e9'));
           
-          // FullCalendar ต้องการ End Date บวกเพิ่ม 1 วัน
+          // FullCalendar ต้องการ End Date บวกเพิ่ม 1 วัน (Exclusive)
           let [ey, em, ed] = endDateStr.split('-').map(Number);
           let endObj = new Date(ey, em - 1, ed + 1);
           let endCalStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
@@ -455,18 +472,29 @@
             extendedProps: { taskData: item }
           });
 
-          // จัดการลิสต์ข้างๆ ปฏิทิน
+          // ==========================================
+          // จัดการลิสต์ Sidebar (🚀 ภารกิจเร็วๆ นี้)
+          // ==========================================
           let [sy, sm, sd] = startDateStr.split('-').map(Number);
           let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
           let endLocal = new Date(ey, em - 1, ed).toLocaleDateString('th-TH');
           
           let dateDisplay = startDateStr !== endDateStr ? `${startLocal} - ${endLocal}` : startLocal;
 
+          // แยกชื่อผู้ปฏิบัติงานให้สามารถคลิกแยกกันได้ทีละคน
+          let namesHtml = namesArr.map(n => 
+            `<span class="hover:underline cursor-pointer" onclick="event.stopPropagation(); openHistoryModal('${n}')" title="ดูประวัติของ ${n}">${n}</span>`
+          ).join('<span class="text-slate-400 cursor-default">, </span>');
+
           listHTML = `
             <div onclick='showDetailModal(${JSON.stringify(item)})' class="p-3 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl shadow-sm cursor-pointer transition mb-2 group">
               <div class="flex justify-between items-start">
-                <p class="font-semibold text-sm text-blue-600 hover:underline transition z-10 relative" onclick="event.stopPropagation(); openHistoryModal('${item.Name}')" title="คลิกเพื่อดูประวัติ">${item.Name}</p>
-                <span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${isPast ? 'bg-slate-100 text-slate-500' : (item.Type==='งานนอก' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700')}">${item.Type} ${isPast ? '(ผ่านไปแล้ว)' : ''}</span>
+                <p class="font-semibold text-sm text-blue-600 transition z-10 relative">
+                  ${namesHtml}
+                </p>
+                <span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${isPast ? 'bg-slate-100 text-slate-500' : (item.Type==='งานนอก' ? 'bg-indigo-100 text-indigo-700' : (item.Type==='งานประจำวัน' ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'))}">
+                  ${item.Type} ${isPast ? '(ผ่านไปแล้ว)' : ''}
+                </span>
               </div>
               <p class="text-xs text-slate-600 mt-1.5 truncate">📌 ${item.Task}</p>
               <div class="flex gap-3 text-[11px] text-slate-400 mt-2 font-medium">
@@ -504,10 +532,12 @@
         }
       }
 
-      // สร้างตาราง
+      // ==============================================
+      // สร้างตารางสถิติ (ตารางตรวจสอบลำดับคิว)
+      // ==============================================
       let tableHTML = '';
       personnelList.forEach((name, idx) => {
-        let stat = pStats[name] || { total: 0, inside: 0, outside: 0, lastDateStr: '-' };
+        let stat = pStats[name] || { total: 0, inside: 0, outside: 0, daily: 0, lastDateStr: '-' };
         let isNext = (name === nextPerson); // ไฮไลท์คิวถัดไปในตาราง
         
         tableHTML += `
@@ -517,18 +547,28 @@
                #${idx + 1}
             </td>
             <td class="p-4 font-semibold ${isNext ? 'text-blue-700' : 'text-slate-800'}">
-              ${name} ${isNext ? '<span class="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase tracking-wide border border-green-200">คิวถัดไป</span>' : ''}
+              <!-- ทำให้ชื่อตรงนี้เป็นปุ่มคลิกสำหรับเปิดประวัติ -->
+              <span class="hover:underline cursor-pointer hover:text-blue-600 transition" onclick="openHistoryModal('${name}')" title="คลิกเพื่อดูประวัติการทำงาน">${name}</span>
+              ${isNext ? '<span class="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase tracking-wide border border-green-200">คิวถัดไป</span>' : ''}
             </td>
             <td class="p-4 text-center font-bold text-slate-800">${stat.total}</td>
             <td class="p-4 text-center text-slate-500">${stat.inside}</td>
             <td class="p-4 text-center text-slate-500">${stat.outside}</td>
+            <!-- แสดงเลขงานประจำวันแยกต่างหาก เป็นสีเขียว -->
+            <td class="p-4 text-center font-medium text-emerald-600">${stat.daily}</td>
             <td class="p-4 text-xs ${stat.lastDateStr === '-' ? 'text-slate-300' : 'text-slate-600'} font-medium">${stat.lastDateStr}</td>
           </tr>
         `;
       });
 
-      if(personnelList.length === 0) tableHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-400">ยังไม่มีรายชื่อในระบบ</td></tr>`;
+      if(personnelList.length === 0) {
+        // แก้ colspan เป็น 7 เพราะเพิ่มคอลัมน์งานประจำวันเข้ามา
+        tableHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-400">ยังไม่มีรายชื่อในระบบ</td></tr>`;
+      }
 
+      // ==============================================
+      // อัปเดตข้อมูลขึ้นหน้าจอ
+      // ==============================================
       document.getElementById('personnel-stats-table').innerHTML = tableHTML;
       document.getElementById('stat-total').innerText = total;
       document.getElementById('stat-inside').innerText = inside;
@@ -539,7 +579,7 @@
       calendar.removeAllEvents();
       calendar.addEventSource(events);
     }
-
+    
     function openTaskModal(itemToEdit = null) {
       renderPersonnelCheckboxes();
       document.getElementById('taskForm').reset();
