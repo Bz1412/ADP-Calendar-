@@ -453,8 +453,8 @@
           // ==========================================
           // จัดการแสดงผลลงปฏิทิน (อ่านวันที่ตรงๆ ไม่ผ่าน Timezone)
           // ==========================================
-          let startDateStr = item.Date.split('T')[0];
-          let endDateStr = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
+          let startDateStr = getLocalYYYYMMDD(item.Date);
+          let endDateStr = item.EndDate ? getLocalYYYYMMDD(item.EndDate) : startDateStr;
           
           let isPast = endDateStr < todayStr;
           let color = isPast ? '#94a3b8' : (item.Type === 'งานนอก' ? '#4f46e5' : (item.Type === 'งานประจำวัน' ? '#10b981' : '#0ea5e9'));
@@ -587,8 +587,8 @@
       if(itemToEdit) {
         document.getElementById('taskModalTitle').innerHTML = '✏️ แก้ไขข้อมูลภารกิจ';
         document.getElementById('edit_task_id').value = itemToEdit.ID || '';
-        document.getElementById('f_date').value = itemToEdit.Date ? itemToEdit.Date.split('T')[0] : '';
-        document.getElementById('f_end_date').value = itemToEdit.EndDate ? itemToEdit.EndDate.split('T')[0] : '';
+        document.getElementById('f_date').value = itemToEdit.Date ? getLocalYYYYMMDD(itemToEdit.Date) : '';
+        document.getElementById('f_end_date').value = itemToEdit.EndDate ? getLocalYYYYMMDD(itemToEdit.EndDate) : '';
         // แทนที่โค้ดส่วนดึงเวลา f_time เดิม (ใน if(itemToEdit)) ด้วยสิ่งนี้
       let timeStr = itemToEdit.Time || '';
       if(timeStr === 'เต็มวัน') {
@@ -628,8 +628,8 @@
       document.getElementById('d_task').innerText = item.Task || '-';
       document.getElementById('d_type').innerText = item.Type || '-';
       
-      let startDateStr = item.Date.split('T')[0];
-      let endDateStr = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
+      let startDateStr = getLocalYYYYMMDD(item.Date);
+      let endDateStr = item.EndDate ? getLocalYYYYMMDD(item.EndDate) : startDateStr;
       let [sy, sm, sd] = startDateStr.split('-').map(Number);
       let startLocal = new Date(sy, sm - 1, sd).toLocaleDateString('th-TH');
       let [ey, em, ed] = endDateStr.split('-').map(Number);
@@ -711,6 +711,18 @@
       }
     }
 
+    // 🌟 ฟังก์ชันแปลงเวลาสากล (UTC) ให้เป็นวันที่ของไทย (Local YYYY-MM-DD) เสมอ
+    function getLocalYYYYMMDD(dateString) {
+      if (!dateString) return '';
+      let d = new Date(dateString);
+      if (isNaN(d.getTime())) return dateString.split('T')[0];
+      
+      let y = d.getFullYear();
+      let m = String(d.getMonth() + 1).padStart(2, '0');
+      let day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
     function toggleTimeInputs() {
       const isAllDay = document.getElementById('f_allday').checked;
       document.getElementById('time_inputs_container').style.display = isAllDay ? 'none' : 'flex';
@@ -743,7 +755,7 @@
         } else {
           html += `<ul class="space-y-2">`;
           tasksOfType.forEach(t => {
-            let dStr = t.Date.split('T')[0];
+            let dStr = getLocalYYYYMMDD(t.Date);
             let [y,m,d] = dStr.split('-');
             let localDate = new Date(y, m-1, d).toLocaleDateString('th-TH');
             
