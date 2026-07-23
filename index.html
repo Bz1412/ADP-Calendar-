@@ -20,6 +20,15 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 6px; }
     ::-webkit-scrollbar-track { background-color: transparent; }
+    /* ✏️ ปรับขนาดตัวอักษรและให้ข้อความตัดบรรทัดได้ในปฏิทิน */
+.fc-event-title { font-size: 0.85em; white-space: normal; padding: 2px; }
+
+/* ✏️ ปรับสีพื้นหลังของ "วันนี้" (ปัจจุบันสีฟ้าอ่อน #e0f2fe) */
+.fc-day-today { background-color: #e0f2fe !important; }
+
+/* ✏️ ปรับสีปุ่มของปฏิทิน (พวกปุ่ม เดือน, รายการ, <, >) */
+.fc-button-primary { background-color: #1e293b !important; border-color: #1e293b !important; }
+.fc-button-primary:hover { background-color: #334155 !important; border-color: #334155 !important; }
   </style>
 </head>
 <body class="pb-16">
@@ -244,17 +253,21 @@
     });
 
     function initCalendar() {
-      var calendarEl = document.getElementById('calendar');
-      calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'th',
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
-        height: 600,
-        buttonText: { today: 'วันนี้', month: 'เดือน', list: 'รายการ' },
-        eventClick: function(info) { showDetailModal(info.event.extendedProps.taskData); }
-      });
-      calendar.render();
-    }
+  var calendarEl = document.getElementById('calendar');
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth', // ✏️ แก้ตรงนี้ถ้าอยากให้เริ่มมาเป็นมุมมองอื่น เช่น 'timeGridWeek' (รายสัปดาห์) หรือ 'listMonth'
+    locale: 'th', // ✏️ ภาษา
+    headerToolbar: { 
+      left: 'prev,next today', 
+      center: 'title', 
+      right: 'dayGridMonth,listWeek' // ✏️ แก้เมนูปุ่มกดด้านขวาบนได้ที่นี่
+    },
+    height: 600, // ✏️ ปรับความสูงของปฏิทิน
+    buttonText: { today: 'วันนี้', month: 'เดือน', list: 'รายการ' },
+    eventClick: function(info) { showDetailModal(info.event.extendedProps.taskData); } // ✏️ การกระทำเมื่อคลิกที่งานในปฏิทิน
+  });
+  calendar.render();
+}
 
     function openModal(id) { 
       document.getElementById(id).style.display = 'flex'; 
@@ -399,12 +412,13 @@
           if(item.EndDate) endDate.setDate(endDate.getDate() + 1);
 
           events.push({
-            title: `${item.Name} - ${item.Task}`,
-            start: itemDateObj.toISOString().split('T')[0],
-            end: endDate.toISOString().split('T')[0],
-            backgroundColor: color, borderColor: color,
-            extendedProps: { taskData: item }
-          });
+  title: `${item.Name} - ${item.Task}`, // ✏️ แก้ตรงนี้ถ้าอยากให้แสดงข้อความแบบอื่นบนแถบปฏิทิน
+  start: itemDateObj.toISOString().split('T')[0],
+  end: endDate.toISOString().split('T')[0],
+  backgroundColor: color, 
+  borderColor: color,
+  extendedProps: { taskData: item }
+});
 
           // จัดการลิสต์ข้างๆ ปฏิทิน (เรียงใหม่สุดอยู่บน)
           let dateDisplay = item.EndDate && item.EndDate !== item.Date 
