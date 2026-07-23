@@ -9,6 +9,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
@@ -185,9 +187,9 @@
             </label>
           </div>
           <div class="flex items-center gap-2" id="time_inputs_container">
-            <input type="time" id="f_time_start" lang="en-GB" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            <input type="text" id="f_time_start" placeholder="00:00" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white cursor-pointer">
             <span class="text-slate-400 font-medium">-</span>
-            <input type="time" id="f_time_end" lang="en-GB" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            <input type="text" id="f_time_end" placeholder="00:00" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white cursor-pointer">
           </div>
         </div>
 
@@ -275,6 +277,21 @@
     document.addEventListener('DOMContentLoaded', function() {
       initCalendar();
       fetchData();
+    });
+
+    flatpickr("#f_time_start", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i", // รูปแบบ 24 ชั่วโมง
+        time_24hr: true    // บังคับ 24 ชั่วโมง
+      });
+      
+      flatpickr("#f_time_end", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true
+      });
     });
 
     function initCalendar() {
