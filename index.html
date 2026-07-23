@@ -141,6 +141,19 @@
     </div>
   </div>
 
+  <!-- Modal ประวัติการทำงาน (แยกตามประเภท) -->
+  <div id="historyModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm transition-opacity">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 space-y-4 animate-[fadeIn_0.2s_ease-out]">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-800 text-lg">👤 ประวัติงาน: <span id="h_person_name" class="text-blue-600"></span></h3>
+        <button onclick="closeModal('historyModal')" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center transition">&times;</button>
+      </div>
+      <div id="history_content" class="max-h-[60vh] overflow-y-auto pr-2 space-y-4">
+        <!-- ข้อมูลประวัติจะถูกสร้างที่นี่ -->
+      </div>
+    </div>
+  </div>
+
   <!-- Modal บันทึกงาน -->
   <div id="taskModal" class="fixed inset-0 bg-slate-900/50 hidden flex-col justify-center items-center z-50 p-4 backdrop-blur-sm transition-opacity">
     <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 space-y-4 animate-[fadeIn_0.2s_ease-out]">
@@ -163,8 +176,18 @@
         </div>
 
         <div>
-          <label class="block text-slate-700 font-medium mb-1.5">เวลา</label>
-          <input type="text" id="f_time" placeholder="เช่น 09:00 - 12:00 น." class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-slate-700 font-medium">เวลา (เริ่ม - สิ้นสุด)</label>
+            <label class="flex items-center gap-1.5 text-sm cursor-pointer text-blue-600 font-medium">
+              <input type="checkbox" id="f_allday" onchange="toggleTimeInputs()" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
+              เต็มวัน
+            </label>
+          </div>
+          <div class="flex items-center gap-2" id="time_inputs_container">
+            <input type="time" id="f_time_start" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            <span class="text-slate-400 font-medium">-</span>
+            <input type="time" id="f_time_end" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          </div>
         </div>
 
         <div>
@@ -183,6 +206,7 @@
             <select id="f_type" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition">
               <option value="งานใน">🏢 งานใน</option>
               <option value="งานนอก">🚗 งานนอก</option>
+              <option value="งานประจำวัน">🔄 งานประจำวัน</option>
             </select>
           </div>
           <div>
@@ -381,8 +405,7 @@
           let itemTimeVal = itemDateObj.getTime();
           let namesArr = item.Name.split(',').map(n => n.trim());
 
-          // เช็คสถิติเฉพาะปีนี้
-          if (itemDateObj.getFullYear() === currentYear) {
+          if (itemDateObj.getFullYear() === currentYear && item.Type !== 'งานประจำวัน') {
             total++;
             if(item.Type === 'งานใน') inside++;
             if(item.Type === 'งานนอก') outside++;
@@ -400,6 +423,12 @@
             });
           }
 
+          // หางานล่าสุดที่ถูกสร้าง/ออกไป เพื่อหาคิวต่อไป (ข้ามงานประจำวัน)
+          if(item.Type !== 'งานประจำวัน' && itemTimeVal >= latestTaskTime) {
+            latestTaskTime = itemTimeVal;
+            lastPeopleAssigned = namesArr; 
+          }
+
           // หางานล่าสุดที่ถูกสร้าง/ออกไป (ไม่สนว่าปีไหน เพื่อหาคิวต่อไป)
           if(itemTimeVal >= latestTaskTime) {
             latestTaskTime = itemTimeVal;
@@ -411,7 +440,7 @@
           let endDateStr = item.EndDate ? item.EndDate.split('T')[0] : startDateStr;
           
           let isPast = endDateStr < todayStr;
-          let color = isPast ? '#94a3b8' : (item.Type === 'งานนอก' ? '#4f46e5' : '#0ea5e9'); // Slate, Indigo, Sky
+          let color = isPast ? '#94a3b8' : (item.Type === 'งานนอก' ? '#4f46e5' : (item.Type === 'งานประจำวัน' ? '#10b981' : '#0ea5e9')); // เพิ่ม Emerald สำหรับงานประจำวัน
           
           // FullCalendar ต้องการ End Date บวกเพิ่ม 1 วัน
           let [ey, em, ed] = endDateStr.split('-').map(Number);
@@ -436,7 +465,7 @@
           listHTML = `
             <div onclick='showDetailModal(${JSON.stringify(item)})' class="p-3 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl shadow-sm cursor-pointer transition mb-2 group">
               <div class="flex justify-between items-start">
-                <p class="font-semibold text-sm text-slate-800 group-hover:text-blue-700 transition">${item.Name}</p>
+                <p class="font-semibold text-sm text-blue-600 hover:underline transition z-10 relative" onclick="event.stopPropagation(); openHistoryModal('${item.Name}')" title="คลิกเพื่อดูประวัติ">${item.Name}</p>
                 <span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${isPast ? 'bg-slate-100 text-slate-500' : (item.Type==='งานนอก' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700')}">${item.Type} ${isPast ? '(ผ่านไปแล้ว)' : ''}</span>
               </div>
               <p class="text-xs text-slate-600 mt-1.5 truncate">📌 ${item.Task}</p>
@@ -520,7 +549,19 @@
         document.getElementById('edit_task_id').value = itemToEdit.ID || '';
         document.getElementById('f_date').value = itemToEdit.Date ? itemToEdit.Date.split('T')[0] : '';
         document.getElementById('f_end_date').value = itemToEdit.EndDate ? itemToEdit.EndDate.split('T')[0] : '';
-        document.getElementById('f_time').value = itemToEdit.Time || '';
+        // แทนที่โค้ดส่วนดึงเวลา f_time เดิม (ใน if(itemToEdit)) ด้วยสิ่งนี้
+      let timeStr = itemToEdit.Time || '';
+      if(timeStr === 'เต็มวัน') {
+        document.getElementById('f_allday').checked = true;
+        document.getElementById('f_time_start').value = '';
+        document.getElementById('f_time_end').value = '';
+      } else {
+        document.getElementById('f_allday').checked = false;
+        let timeParts = timeStr.split('-');
+        document.getElementById('f_time_start').value = timeParts[0] ? timeParts[0].trim() : '';
+        document.getElementById('f_time_end').value = timeParts[1] ? timeParts[1].trim() : '';
+      }
+      toggleTimeInputs();
         document.getElementById('f_task').value = itemToEdit.Task || '';
         document.getElementById('f_location').value = itemToEdit.Location || '';
         document.getElementById('f_type').value = itemToEdit.Type || 'งานใน';
@@ -534,6 +575,11 @@
         document.getElementById('taskModalTitle').innerHTML = '➕ บันทึกภารกิจใหม่';
         document.getElementById('edit_task_id').value = '';
         document.getElementById('btnDeleteTask').classList.add('hidden');
+        // รีเซ็ตตอนกด "เพิ่มงานใหม่"
+      document.getElementById('f_allday').checked = false;
+      document.getElementById('f_time_start').value = '';
+      document.getElementById('f_time_end').value = '';
+      toggleTimeInputs();
       }
       openModal('taskModal');
     }
@@ -589,7 +635,8 @@
         ID: document.getElementById('edit_task_id').value || new Date().getTime(),
         Date: document.getElementById('f_date').value,
         EndDate: document.getElementById('f_end_date').value || document.getElementById('f_date').value,
-        Time: document.getElementById('f_time').value,
+        Time: document.getElementById('f_allday').checked ? 'เต็มวัน' : 
+            (document.getElementById('f_time_start').value ? document.getElementById('f_time_start').value + (document.getElementById('f_time_end').value ? ' - ' + document.getElementById('f_time_end').value : '') : ''),
         Name: selectedNames.join(', '),
         Task: document.getElementById('f_task').value,
         Location: document.getElementById('f_location').value,
@@ -622,6 +669,60 @@
         console.error(error);
         alert('เกิดข้อผิดพลาดในการส่งข้อมูล โปรดตรวจสอบอินเทอร์เน็ตหรือ URL');
       }
+    }
+
+    function toggleTimeInputs() {
+      const isAllDay = document.getElementById('f_allday').checked;
+      document.getElementById('time_inputs_container').style.display = isAllDay ? 'none' : 'flex';
+      if(isAllDay) {
+        document.getElementById('f_time_start').value = '';
+        document.getElementById('f_time_end').value = '';
+      }
+    }
+
+    function openHistoryModal(name) {
+      document.getElementById('h_person_name').innerText = name;
+      
+      // กรองหางานที่ชื่อตรงกับคนที่คลิก
+      let personTasks = allData.filter(t => t.Name && t.Name.split(',').map(n=>n.trim()).includes(name));
+      personTasks.sort((a,b) => new Date(b.Date) - new Date(a.Date)); // เรียงใหม่ไปเก่า
+      
+      let html = '';
+      const types = ['งานใน', 'งานนอก', 'งานประจำวัน'];
+      
+      types.forEach(type => {
+        let tasksOfType = personTasks.filter(t => t.Type === type);
+        html += `<div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <h4 class="font-bold text-slate-700 border-b border-slate-200 pb-2 mb-3 flex justify-between items-center">
+            ${type === 'งานใน' ? '🏢' : (type === 'งานนอก' ? '🚗' : '🔄')} ${type}
+            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">${tasksOfType.length} งาน</span>
+          </h4>`;
+        
+        if(tasksOfType.length === 0) {
+          html += `<p class="text-sm text-slate-400 text-center py-2">ไม่มีประวัติ</p>`;
+        } else {
+          html += `<ul class="space-y-2">`;
+          tasksOfType.forEach(t => {
+            let dStr = t.Date.split('T')[0];
+            let [y,m,d] = dStr.split('-');
+            let localDate = new Date(y, m-1, d).toLocaleDateString('th-TH');
+            
+            html += `<li class="text-sm bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+              <div class="font-medium text-slate-800">${t.Task}</div>
+              <div class="text-[11px] text-slate-500 flex gap-3 mt-1.5">
+                <span>🗓️ ${localDate}</span>
+                <span>⏰ ${t.Time || '-'}</span>
+                <span>📍 ${t.Location || '-'}</span>
+              </div>
+            </li>`;
+          });
+          html += `</ul>`;
+        }
+        html += `</div>`;
+      });
+      
+      document.getElementById('history_content').innerHTML = html;
+      openModal('historyModal');
     }
   </script>
 </body>
